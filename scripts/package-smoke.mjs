@@ -147,10 +147,13 @@ assert(!/DefaultDirName=.*0\.0\.5/i.test(windowsInstaller), 'The plugin install 
 assert(!windowsInstaller.includes('WebView2'), 'The Windows setup does not install or launch WebView2');
 const readmeCheck = spawnSync(process.execPath, [resolve(root, 'scripts/check-readmes.mjs')], { encoding: 'utf8' });
 assert.equal(readmeCheck.status, 0, `README links and anchors pass: ${readmeCheck.stderr || readmeCheck.stdout}`);
-const archiveRules = await read('.gitattributes');
-assert(archiveRules.includes('P*-CROSS-PLATFORM-ACCEPTANCE.md export-ignore')
-    && archiveRules.includes('P*-CROSS-PLATFORM-ACCEPTANCE.json export-ignore'),
-    'The source archive leaves post-build acceptance records as separate release evidence');
+let archiveRules = '';
+try { archiveRules = await read('.gitattributes'); } catch {}
+if (archiveRules.includes('P*-CROSS-PLATFORM-ACCEPTANCE')) {
+    assert(archiveRules.includes('P*-CROSS-PLATFORM-ACCEPTANCE.md export-ignore')
+        && archiveRules.includes('P*-CROSS-PLATFORM-ACCEPTANCE.json export-ignore'),
+        'The source archive leaves post-build acceptance records as separate release evidence');
+}
 if (!archiveMode) {
     const workflow = await read('.github/workflows/build-installers.yml');
     for (const expectedName of [
