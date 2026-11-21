@@ -1,8 +1,8 @@
 # 微粒（Pulvis）—— CsModular 颗粒合成插件
 
-[English](README.md) · [简体中文](README.zh-CN.md) · [Русский](README.ru.md)
+[English](README.md) · **简体中文** · [Русский](README.ru.md)
 
-<p align="center"><img src="assets/pulvis-icon.png" width="144" alt="微粒应用图标"></p>
+<p align="center"><img src="assets/pulvis-header-zh-CN.png" width="760" alt="微粒颗粒合成，墨点绘成的声音山形"></p>
 
 <p align="center"><strong>为 CsModular 打造的原创 Csound 颗粒合成插件库，包含三个独立模块。</strong></p>
 
@@ -10,14 +10,11 @@
   版本 0.0.5 ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe">Windows x64</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe">Windows ARM64</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg">macOS（Apple 芯片）</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg">macOS（Intel 芯片）</a> ·
+  <a href="#macos">macOS</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb">Linux x64 (.deb)</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip">源码包 ZIP</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt">SHA-256 校验</a>
 </p>
-
-<p align="center"><img src="assets/pulvis-header-zh-CN.png" width="760" alt="微粒颗粒合成插件库预览图"></p>
 
 ## 包含模块
 
@@ -42,15 +39,12 @@
 3. 直接打开 CsModular —— **Pulvis** 插件会自动出现在模块列表中。
 4. **卸载：** 在 Windows“已安装的应用”中卸载，或运行插件目录内的 `unins000.exe`。
 
-### macOS（Apple 芯片 / Intel 芯片独立安装包）
+### macOS
 
-1. 按 Mac 芯片型号下载原生 `.pkg` 安装包：
-   - **Apple 芯片（M1 / M2 / M3 / M4）：** [Pulvis-0.0.5-macos-arm64.pkg](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg)
-   - **Intel 芯片：** [Pulvis-0.0.5-macos-x64.pkg](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg)
-2. 双击 `.pkg`（首次如遇未签名提示可右键选择 **打开**），按 macOS 标准安装向导完成安装。若 CsModular 位于 `/Applications/CsModular.app`，插件会自动注册。
-   - 若 CsModular 安装在自定义路径，可在终端运行 `pulvis-install /你的/CsModular.app路径`。
-3. 打开 CsModular —— **Pulvis** 插件会自动出现在模块列表中。
-4. **卸载：** 在终端运行 `pulvis-install auto-uninstall`（或 `pulvis-install uninstall /你的/CsModular.app路径`）。
+- [下载 Apple 芯片版 (.pkg)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg)
+- [下载 Intel 芯片版 (.pkg)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg)
+
+安装包上传到 [0.0.5 发布页](https://github.com/NJyutong/csmodular-pulvis/releases/tag/v0.0.5) 后，以上链接即可下载。
 
 ### Linux（x64 Debian / Ubuntu）
 

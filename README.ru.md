@@ -1,8 +1,8 @@
 # Пульвис (Pulvis) — плагин гранулярного синтеза для CsModular
 
-[English](README.md) · [简体中文](README.zh-CN.md) · [Русский](README.ru.md)
+[English](README.md) · [简体中文](README.zh-CN.md) · **Русский**
 
-<p align="center"><img src="assets/pulvis-icon.png" width="144" alt="Значок приложения «Пульвис»"></p>
+<p align="center"><img src="assets/pulvis-header-ru.png" width="760" alt="Пульвис — гранулярный синтез, волна в срезах ленты"></p>
 
 <p align="center"><strong>Три оригинальных модуля гранулярного синтеза на Csound для CsModular.</strong></p>
 
@@ -10,14 +10,11 @@
   Версия 0.0.5 ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe">Windows x64</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe">Windows ARM64</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg">macOS (Apple Silicon)</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg">macOS (Intel)</a> ·
+  <a href="#macos">macOS</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb">Linux x64 (.deb)</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip">Исходный код ZIP</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt">SHA-256</a>
 </p>
-
-<p align="center"><img src="assets/pulvis-header-ru.png" width="760" alt="Превью библиотеки гранулярного синтеза «Пульвис»"></p>
 
 ## Модули
 
@@ -42,15 +39,12 @@
 3. Откройте CsModular — библиотека **Pulvis** автоматически появится в списке модулей.
 4. **Удаление:** через список установленных приложений Windows или запустив `unins000.exe` в папке плагина.
 
-### macOS (отдельно Apple Silicon и Intel)
+### macOS
 
-1. Скачайте стандартный установщик `.pkg` для процессора вашего Mac:
-   - **Apple Silicon (M1 / M2 / M3 / M4):** [Pulvis-0.0.5-macos-arm64.pkg](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg)
-   - **Intel Mac:** [Pulvis-0.0.5-macos-x64.pkg](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg)
-2. Откройте `.pkg` (при первом запуске нажмите ПКМ → **Открыть**) и завершите стандартный мастер установки macOS. Если CsModular находится в `/Applications/CsModular.app`, плагин зарегистрируется автоматически.
-   - Для нестандартного пути выполните в Терминале: `pulvis-install /путь/к/CsModular.app`.
-3. Откройте CsModular — библиотека **Pulvis** автоматически появится в списке модулей.
-4. **Удаление:** выполните `pulvis-install auto-uninstall` (или `pulvis-install uninstall /путь/к/CsModular.app`).
+- [Скачать для Apple Silicon (.pkg)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg)
+- [Скачать для Mac с процессором Intel (.pkg)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg)
+
+Ссылки заработают после загрузки установщиков на [страницу выпуска 0.0.5](https://github.com/NJyutong/csmodular-pulvis/releases/tag/v0.0.5).
 
 ### Linux (x64 Debian / Ubuntu)
 

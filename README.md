@@ -1,8 +1,8 @@
 # Pulvis — Granular Synthesis Plugin for CsModular
 
-[English](README.md) · [简体中文](README.zh-CN.md) · [Русский](README.ru.md)
+**English** · [简体中文](README.zh-CN.md) · [Русский](README.ru.md)
 
-<p align="center"><img src="assets/pulvis-icon.png" width="144" alt="Pulvis application icon"></p>
+<p align="center"><img src="assets/pulvis-header-en.png" width="760" alt="Pulvis granular instruments with a circular oscillator trace"></p>
 
 <p align="center"><strong>Three original Csound granular synthesis modules for CsModular.</strong></p>
 
@@ -10,14 +10,11 @@
   Version 0.0.5 ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe">Windows x64</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe">Windows ARM64</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg">macOS (Apple Silicon)</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg">macOS (Intel)</a> ·
+  <a href="#macos">macOS</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb">Linux x64 (.deb)</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip">Source ZIP</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt">SHA-256</a>
 </p>
-
-<p align="center"><img src="assets/pulvis-social-preview.png" width="760" alt="Pulvis granular synthesis library preview"></p>
 
 ## Modules
 
@@ -42,15 +39,12 @@ During playback, Grain Osc shows its carrier and output waveform, Grain Freeze s
 3. Open CsModular — **Pulvis** automatically appears in the module list.
 4. **Uninstall:** Use Windows *Installed apps*, or run `unins000.exe` inside the plugin folder.
 
-### macOS (Apple Silicon & Intel)
+### macOS
 
-1. Download the native `.pkg` installer for your Mac:
-   - **Apple Silicon (M1 / M2 / M3 / M4):** [Pulvis-0.0.5-macos-arm64.pkg](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg)
-   - **Intel Mac:** [Pulvis-0.0.5-macos-x64.pkg](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg)
-2. Double-click the `.pkg` (or right-click → **Open** on first run) and complete the standard macOS Installer wizard. If CsModular is installed in `/Applications/CsModular.app`, Pulvis is registered automatically.
-   - If CsModular is in a custom folder, run `pulvis-install /path/to/CsModular.app` in Terminal.
-3. Open CsModular — **Pulvis** automatically appears in the module list.
-4. **Uninstall:** Run `pulvis-install auto-uninstall` (or `pulvis-install uninstall /path/to/CsModular.app`).
+- [Download for Apple Silicon (.pkg)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg)
+- [Download for Intel Mac (.pkg)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg)
+
+The download links will work when the installers are uploaded to the [0.0.5 release](https://github.com/NJyutong/csmodular-pulvis/releases/tag/v0.0.5).
 
 ### Linux (x64 Debian / Ubuntu)
 
