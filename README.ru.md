@@ -17,24 +17,32 @@
 Закройте **CsModular 0.1.5** с интеграцией Pulvis и нажмите кнопку для вашей системы и процессора.
 
 <p>
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe"><img src="https://badgen.net/badge/Windows/x64/35678b?icon=download&amp;labelColor=252b30" height="30" alt="Скачать Pulvis 0.0.5 · Windows x64"></a>
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe"><img src="https://badgen.net/badge/Windows/ARM64/35678b?icon=download&amp;labelColor=252b30" height="30" alt="Скачать Pulvis 0.0.5 · Windows ARM64"></a>
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg"><img src="https://badgen.net/badge/macOS/Apple%20Silicon/685488?icon=download&amp;labelColor=252b30" height="30" alt="Скачать Pulvis 0.0.5 · macOS Apple Silicon"></a>
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg"><img src="https://badgen.net/badge/macOS/Intel/685488?icon=download&amp;labelColor=252b30" height="30" alt="Скачать Pulvis 0.0.5 · macOS Intel"></a>
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb"><img src="https://badgen.net/badge/Linux/amd64%20.deb/486b47?icon=download&amp;labelColor=252b30" height="30" alt="Скачать Pulvis 0.0.5 · Linux amd64 .deb"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="Скачать Pulvis 0.0.5 · Windows x64"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe"><img src="assets/downloads/windows-arm64.png" width="231" alt="Скачать Pulvis 0.0.5 · Windows ARM64"></a>
 </p>
 
-Pulvis 0.0.5 · [Исходный код (ZIP)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip) · [Контрольные суммы SHA-256](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt)
+Для ПК с процессором Intel или AMD выберите x64, для Windows на Arm — ARM64. Запустите `.exe` и укажите папку `libraries/pulvis` в каталоге CsModular.
 
-- **Windows** — Для ПК с процессором Intel или AMD выберите x64, для Windows на Arm — ARM64. Запустите `.exe` и укажите папку `libraries/pulvis` в каталоге CsModular.
-- **macOS** — Для Mac с чипом серии M выберите Apple Silicon, для Mac с процессором Intel — Intel. Откройте `.pkg` и следуйте указаниям установщика.
-- **Linux** — В Debian или Ubuntu выполните команду из каталога, в который скачан пакет.
+<p>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg"><img src="assets/downloads/macos-arm64.png" width="231" alt="Скачать Pulvis 0.0.5 · macOS Apple Silicon"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg"><img src="assets/downloads/macos-x64.png" width="231" alt="Скачать Pulvis 0.0.5 · macOS Intel"></a>
+</p>
 
-  ```sh
-  sudo apt install ./Pulvis-0.0.5-linux-x64.deb
-  ```
+Для Mac с чипом серии M выберите Apple Silicon, для Mac с процессором Intel — Intel. Откройте `.pkg` и следуйте указаниям установщика.
+
+<p>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb"><img src="assets/downloads/linux-x64.png" width="231" alt="Скачать Pulvis 0.0.5 · Linux amd64 .deb"></a>
+</p>
+
+В Debian или Ubuntu выполните команду из каталога, в который скачан пакет.
+
+```sh
+sudo apt install ./Pulvis-0.0.5-linux-x64.deb
+```
 
 Откройте CsModular и нажмите **Пробел**. В разделе **Pulvis** появятся три модуля.
+
+Pulvis 0.0.5 · [Исходный код (ZIP)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip) · [Контрольные суммы SHA-256](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt)
 
 <details>
 <summary>Другой путь установки, обновление и удаление</summary>
