@@ -14,11 +14,13 @@
 
 ## 安装与卸载
 
+请先下载并安装 **CsModular 0.1.5** 宿主，点击下图打开宿主的 GitHub 仓库。
+
 <p align="center">
   <a href="https://github.com/gleb812/csmodular"><img src="assets/downloads/csmodular-host.png" width="231" alt="前往 GitHub 查看 CsModular 宿主仓库"></a>
 </p>
 
-请先关闭已集成 Pulvis 的 **CsModular 0.1.5**，再点击与你的系统和处理器对应的安装包。
+宿主安装完成后，请关闭 CsModular，再选择下方对应系统与处理器的 Pulvis 安装包。
 
 <p align="center">
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="下载 Pulvis 0.0.5 · Windows x64"></a>

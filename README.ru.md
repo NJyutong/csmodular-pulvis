@@ -14,11 +14,13 @@
 
 ## Установка и удаление
 
+Сначала скачайте и установите хост **CsModular 0.1.5**. Нажмите на изображение, чтобы открыть его репозиторий на GitHub.
+
 <p align="center">
   <a href="https://github.com/gleb812/csmodular"><img src="assets/downloads/csmodular-host.png" width="231" alt="Открыть репозиторий хоста CsModular на GitHub"></a>
 </p>
 
-Закройте **CsModular 0.1.5** с интеграцией Pulvis и нажмите кнопку для вашей системы и процессора.
+После установки закройте CsModular и выберите установщик Pulvis для своей системы и процессора.
 
 <p align="center">
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="Скачать Pulvis 0.0.5 · Windows x64"></a>

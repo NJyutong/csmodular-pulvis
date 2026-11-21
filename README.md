@@ -14,11 +14,13 @@
 
 ## Installation
 
+First download and install the **CsModular 0.1.5** host. Click the image to open its GitHub repository.
+
 <p align="center">
   <a href="https://github.com/gleb812/csmodular"><img src="assets/downloads/csmodular-host.png" width="231" alt="Open the CsModular host repository on GitHub"></a>
 </p>
 
-Close **CsModular 0.1.5** with Pulvis host integration, then click the installer for your system and processor.
+Close CsModular after installing the host, then choose the Pulvis installer for your system and processor.
 
 <p align="center">
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="Download Pulvis 0.0.5 · Windows x64"></a>
