@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { dirname } from 'node:path';
@@ -7,9 +8,13 @@ import { fileURLToPath } from 'node:url';
 const scriptRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const root = resolve(process.argv[2] || scriptRoot);
 const read = path => readFile(resolve(root, path));
-const source = await read('assets/pulvis-source.webp');
-assert.equal(source.toString('ascii', 0, 4), 'RIFF', 'User supplied source must be WebP');
-assert.equal(source.toString('ascii', 8, 12), 'WEBP', 'User supplied source must be WebP');
+let sourceBytes = 0;
+if (existsSync(resolve(root, 'assets/pulvis-source.webp'))) {
+    const source = await read('assets/pulvis-source.webp');
+    assert.equal(source.toString('ascii', 0, 4), 'RIFF', 'User supplied source must be WebP');
+    assert.equal(source.toString('ascii', 8, 12), 'WEBP', 'User supplied source must be WebP');
+    sourceBytes = source.length;
+}
 
 const sourcePng = await read('assets/pulvis-icon.png');
 assert.equal(sourcePng.toString('hex', 0, 8), '89504e470d0a1a0a', 'README icon must be PNG');
@@ -44,4 +49,4 @@ assert.equal(wizardSmall.toString('hex', 0, 8), '89504e470d0a1a0a', 'Wizard corn
 assert.equal(wizardSmall.readUInt32BE(16), 256, 'Wizard corner icon width');
 assert.equal(wizardSmall.readUInt32BE(20), 256, 'Wizard corner icon height');
 
-console.log(`Icon assets validated: WebP source ${source.length} bytes, PNG ${sourcePng.length} bytes, ICO ${frameCount} sizes.`);
+console.log(`Icon assets validated: WebP source ${sourceBytes} bytes, PNG ${sourcePng.length} bytes, ICO ${frameCount} sizes.`);

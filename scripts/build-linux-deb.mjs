@@ -36,6 +36,7 @@ const PAYLOAD_FILES = [
     'README.ru.md',
     'LICENSE',
     'assets/pulvis-icon.png',
+    'assets/pulvis-header-en.png',
     'assets/pulvis-social-preview.png',
     'assets/pulvis-header-zh-CN.png',
     'assets/pulvis-header-ru.png',

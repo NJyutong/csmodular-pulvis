@@ -34,15 +34,21 @@ const anchorSlug = heading => heading.trim().toLowerCase()
 for (let index = 0; index < files.length; index++) {
     const file = files[index];
     const markdown = readFileSync(resolve(root, file), 'utf8');
+    const nav = markdown.split(/\r?\n/).find(line => line.includes(' · ') && line.includes('README'));
+    const languageNames = ['English', '简体中文', 'Русский'];
+    const expectedNav = files.map((other, i) => other === file
+        ? `**${languageNames[i]}**` : `[${languageNames[i]}](${other})`).join(' · ');
+    assert.equal(nav, expectedNav, `${file} links only to the other language editions`);
     const localizedName = localizedNames[index];
     assert(markdown.includes(localizedName), `${file} starts with its localized Pulvis name`);
     for (const name of releaseNames.filter(name => !name.endsWith('-source.zip'))) {
         assert(markdown.includes(releaseBase + name), `${file} links to ${name}`);
     }
-    assert(markdown.includes(`assets/pulvis-icon.png`), `${file} uses the repository icon`);
-    assert.match(markdown, /<img src="assets\/pulvis-icon\.png" width="144" alt="[^"]+">/,
-        `${file} presents the repository icon at a compact, readable size`);
-    assert(existsSync(resolve(root, 'assets/pulvis-icon.png')), 'The README icon is present in the repository');
+    const language = ['en', 'zh-CN', 'ru'][index];
+    const header = `assets/pulvis-header-${language}.png`;
+    assert.equal(markdown.match(/<img src="([^"]+)"/)?.[1], header, `${file} opens with its own localized artwork`);
+    const png = readFileSync(resolve(root, header));
+    assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [1280, 640]);
     assert(markdown.includes(version), `${file} identifies version ${version}`);
     for (const feature of featureLines[index]) assert(markdown.includes(feature), `${file} introduces ${feature}`);
 

@@ -66,7 +66,7 @@ const expectedFiles = [
     'docs/BUILDING.md', 'docs/TESTING.md', 'docs/GITHUB-SETUP.md', 'release-notes/0.0.5.md',
     'assets/pulvis-social-preview.png',
 ];
-expectedFiles.push('SOURCES.md');
+expectedFiles.push('SOURCES.md', 'assets/pulvis-header-en.png', 'assets/pulvis-header-zh-CN.png', 'assets/pulvis-header-ru.png');
 if (!archiveMode) expectedFiles.push('.github/workflows/build-installers.yml');
 if (!stageMode) expectedFiles.push('integration/csmodular.patch', 'integration/wav-session-compat.patch', 'integration/studio-upgrade.patch', 'integration/studio-display-update.patch', 'integration/studio-release-update.patch', 'integration/studio-live-update.patch', 'integration/display-menu.patch', 'scripts/build-modules.mjs', 'scripts/install.mjs');
 if (!archiveMode && !stageMode) expectedFiles.push('scripts/check.mjs', 'scripts/check-suite.mjs', 'scripts/inventory-artifacts.mjs');

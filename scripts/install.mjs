@@ -83,7 +83,7 @@ try {
         merged.modules = [...merged.modules.filter(m => !ids.has(typeof m === 'string' ? m : m?.name)), ...modules.modules];
     }
     files.set(join(target, '_index.json'), JSON.stringify(merged, null, 2) + '\n');
-    for (const path of ['_meta.json', 'README.md', 'README.zh-CN.md', 'README.ru.md', 'SOURCES.md', 'LICENSE', 'assets/pulvis-icon.png', 'assets/pulvis-social-preview.png', 'assets/pulvis-header-zh-CN.png', 'assets/pulvis-header-ru.png']) {
+    for (const path of ['_meta.json', 'README.md', 'README.zh-CN.md', 'README.ru.md', 'SOURCES.md', 'LICENSE', 'assets/pulvis-icon.png', 'assets/pulvis-header-en.png', 'assets/pulvis-social-preview.png', 'assets/pulvis-header-zh-CN.png', 'assets/pulvis-header-ru.png']) {
         files.set(join(target, path), await readFile(join(root, path)));
     }
     files.set(join(host, 'public/csound/modules/GrainCore.txt'), await readFile(join(root, 'csound/GrainCore.txt')));
