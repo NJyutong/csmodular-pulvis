@@ -1,8 +1,14 @@
 # Пульвис (Pulvis) — плагин гранулярного синтеза для CsModular
 
+<div align="center">
+
 [English](README.md) · [简体中文](README.zh-CN.md) · **Русский**
 
+</div>
+
 <p align="center"><img src="assets/pulvis-header-ru.png" width="760" alt="Пульвис — гранулярный синтез, волна в срезах ленты"></p>
+
+<p align="center"><strong>Время, замри — дай тембрам расти!</strong></p>
 
 <p align="center"><strong>Три оригинальных модуля гранулярного синтеза на Csound для CsModular.</strong></p>
 
@@ -10,7 +16,8 @@
   Версия 0.0.5 ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe">Windows x64</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe">Windows ARM64</a> ·
-  <a href="#macos">macOS</a> ·
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg">macOS Apple Silicon</a> ·
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg">macOS Intel</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb">Linux x64 (.deb)</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip">Исходный код ZIP</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt">SHA-256</a>

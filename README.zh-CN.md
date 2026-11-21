@@ -1,8 +1,14 @@
 # 微粒（Pulvis）—— CsModular 颗粒合成插件
 
+<div align="center">
+
 [English](README.md) · **简体中文** · [Русский](README.ru.md)
 
+</div>
+
 <p align="center"><img src="assets/pulvis-header-zh-CN.png" width="760" alt="微粒颗粒合成，墨点绘成的声音山形"></p>
+
+<p align="center"><strong>把时间停驻，让音色生长。</strong></p>
 
 <p align="center"><strong>为 CsModular 打造的原创 Csound 颗粒合成插件库，包含三个独立模块。</strong></p>
 
@@ -10,7 +16,8 @@
   版本 0.0.5 ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe">Windows x64</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe">Windows ARM64</a> ·
-  <a href="#macos">macOS</a> ·
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg">macOS Apple 芯片</a> ·
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg">macOS Intel</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb">Linux x64 (.deb)</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip">源码包 ZIP</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt">SHA-256 校验</a>

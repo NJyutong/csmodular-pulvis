@@ -1,8 +1,14 @@
 # Pulvis — Granular Synthesis Plugin for CsModular
 
+<div align="center">
+
 **English** · [简体中文](README.zh-CN.md) · [Русский](README.ru.md)
 
+</div>
+
 <p align="center"><img src="assets/pulvis-header-en.png" width="760" alt="Pulvis granular instruments with a circular oscillator trace"></p>
+
+<p align="center"><strong>Freeze time. Let tones climb.</strong></p>
 
 <p align="center"><strong>Three original Csound granular synthesis modules for CsModular.</strong></p>
 
@@ -10,7 +16,8 @@
   Version 0.0.5 ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe">Windows x64</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe">Windows ARM64</a> ·
-  <a href="#macos">macOS</a> ·
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg">macOS Apple Silicon</a> ·
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg">macOS Intel</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb">Linux x64 (.deb)</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip">Source ZIP</a> ·
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt">SHA-256</a>
