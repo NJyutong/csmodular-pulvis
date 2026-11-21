@@ -1,3 +1,7 @@
 node_modules/
 test-results/
+release-assets/
 *.log
+installer/target/
+installer/node_modules/
+installer/src-tauri/gen/

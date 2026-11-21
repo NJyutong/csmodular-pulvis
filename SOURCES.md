@@ -1,5 +1,11 @@
 # Provenance and license decisions
 
+## Download button artwork
+
+The Windows, macOS and Linux download buttons were drawn for the Pulvis manuals. The Apple and Linux silhouettes are rasterized from Font Awesome Free 6.7.2 by Fonticons, Inc. Their size and color were adapted to the buttons. Font Awesome licenses its icon artwork under CC BY 4.0. [Font Awesome source and license](https://github.com/FortAwesome/Font-Awesome/blob/6.7.2/LICENSE.txt) · [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+
+The CsModular repository button uses the application icon shipped in the upstream desktop bundle, scaled to fit the button. [CsModular icon source](https://github.com/gleb812/csmodular/blob/main/src-tauri/icons/128x128.png)
+
 ## Pulvis application icon (2026-11-19)
 
 The user supplied `深色粒子波纹应用图标.webp` from the local Downloads folder for

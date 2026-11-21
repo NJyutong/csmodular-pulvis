@@ -1,2 +1,21 @@
 # Unified diff context lines require their leading space, including blank lines.
 *.patch text eol=lf whitespace=-blank-at-eol
+scripts/build-linux-deb.sh text eol=lf
+
+# Keep release archives focused on the plugin, excluding development-only files.
+.github/** export-ignore
+P*-CROSS-PLATFORM-ACCEPTANCE.md export-ignore
+P*-CROSS-PLATFORM-ACCEPTANCE.json export-ignore
+AGENTS.md export-ignore
+CHECKS.md export-ignore
+VALIDATION.md export-ignore
+reference-files.json export-ignore
+validation-dsp.json export-ignore
+validation-dsp-node.json export-ignore
+tests/** export-ignore
+test-results/** export-ignore
+scripts/record-sources.mjs export-ignore
+docs/README.md export-ignore
+docs/AI_CONTEXT.md export-ignore
+docs/AI_PROJECT_READING_PROMPT.md export-ignore
+docs/PROJECT_STRUCTURE.md export-ignore

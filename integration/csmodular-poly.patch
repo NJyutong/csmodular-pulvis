@@ -1,0 +1,3230 @@
+diff --git a/main.js b/main.js
+index 0a76740..96d79fd 100644
+--- a/main.js
++++ b/main.js
+@@ -219,7 +219,7 @@ class ModularSystem {
+ 
+     // Debounce для recompile (не чаще раза в 300мс)
+     this._recompileDebounced = debounce(
+-        () => this.csoundEngine.recompile(),
++        () => this.csoundEngine.recompile({ onlyIfRunning: true }),
+         300
+     );
+     this.setupParallax();
+@@ -260,12 +260,8 @@ class ModularSystem {
+           this.voiceIndicator.rebuild(n);
+       }
+ 
+-      // 4. Перезапуск Csound
+-      const engine = this.csoundEngine;
+-      if (engine) {
+-          this.showNotification?.(`🔄 Restarting Csound with ${n} voice${n === 1 ? '' : 's'}…`);
+-          await engine.stop();
+-          await engine.init();
++      if (!await this.csoundEngine.recompile({ onlyIfRunning: true })) {
++          throw new Error('Csound could not apply the voice settings.');
+       }
+   }
+ 
+@@ -385,12 +381,7 @@ class ModularSystem {
+       const ctx = this.dynamicCtx;
+       if (!ctx) return;
+ 
+-      ctx.clearRect(0, 0, this.dynamicCanvas.width, this.dynamicCanvas.height);
+-
+-      ctx.save();
+-      ctx.translate(this.offsetX, this.offsetY);
+-      ctx.scale(this.scale, this.scale);
+-
++      let drawing = false;
+       const layers = this.layerManager.layers;
+ 
+       for (const layerName of ['voice', 'fx']) {
+@@ -408,13 +399,22 @@ class ModularSystem {
+                   );
+                   module._dynamicComps = comps;   // может быть []
+               }
+-              if (comps.length === 0) continue;
++              if (comps.length === 0 || !this.panelInView(module)) continue;
++              if (!drawing) {
++                  ctx.clearRect(0, 0, this.dynamicCanvas.width, this.dynamicCanvas.height);
++                  ctx.save();
++                  ctx.translate(this.offsetX, this.offsetY);
++                  ctx.scale(this.scale, this.scale);
++                  drawing = true;
++              }
+ 
+               for (const comp of comps) comp.draw(ctx);
+           }
+       }
+ 
+-      ctx.restore();
++      if (drawing) ctx.restore();
++      else if (this._dynamicHadContent) ctx.clearRect(0, 0, this.dynamicCanvas.width, this.dynamicCanvas.height);
++      this._dynamicHadContent = drawing;
+   }
+ 
+   _csoundStateLabel(state) {
+@@ -900,7 +900,7 @@ class ModularSystem {
+       this.canvas.style.left = '0';
+       this.canvas.style.top = '0';
+       this.canvas.style.transform = 'none';   // ← убираем центрирование
+-      this.canvas.style.objectFit = 'none';
++      this.canvas.style.objectFit = 'fill';
+ 
+       // Сохраняем базовые размеры (для GridCache и т.д.)
+       this.baseCanvasWidth = this.canvas.width;
+@@ -929,7 +929,7 @@ class ModularSystem {
+   }
+ 
+   resizeCanvasToWindow() {
+-      const dpr = 1;//window.devicePixelRatio || 1;
++      const dpr = window.devicePixelRatio || 1;
+       const w = window.innerWidth;
+       const h = window.innerHeight;
+ 
+@@ -1147,6 +1147,7 @@ class ModularSystem {
+             area: (module.layer || 'voice').toUpperCase(),
+             hpos: module.gridX || 0,
+             vpos: module.gridY || 0,
++            coordinateSpace: 'world',
+             customColor: module.customColor || null,
+             midiMappings: this._collectMidiMappings(module),
+         };
+@@ -1746,16 +1747,6 @@ class ModularSystem {
+           this._wasDragging = true;
+       }
+ 
+-      const needsRedraw =
+-          hasDragging ||
+-          this._voiceDirty ||
+-          this._fxDirty ||
+-          this._cablesDirty ||
+-          this._forceRedraw ||
+-          this._stickerDirty ||
+-          this._hasAnimatedStickers() || 
+-          this.frameCount % 30 === 0;
+-
+       // ⭐ Рисуем "modules" (сетка + VOICE + FX) ТОЛЬКО когда реально надо
+       const modulesNeedRedraw =
+           this._voiceDirty ||
+@@ -1969,16 +1960,7 @@ class ModularSystem {
+           return;
+         }
+ 
+-        // 4. FX auto-layout: не выше Voice-зоны
+-        if (layerName === 'fx') {
+-            const fxFloorY = this._getFxFloorY();
+-            if (gridY < fxFloorY) {
+-                console.log(`📐 FX auto-layout: Y=${gridY} → ${fxFloorY}`);
+-                gridY = fxFloorY;
+-            }
+-        }
+-
+-        const gridWidth = PANEL_GRID_WIDTH;
++        const gridWidth = this.moduleFactory.getGridWidth(moduleDef);
+         const gridHeight = moduleDef.gridHeight || 2;
+ 
+         // 5. Коллизия → свободное место
+@@ -2005,47 +1987,9 @@ class ModularSystem {
+           gridX = freeSpace.gridX;
+           gridY = freeSpace.gridY;
+ 
+-          // Повторная FX-проверка: findFreeSpace мог вернуть место выше voice
+-          if (layerName === 'fx') {
+-              const fxFloorY = this._getFxFloorY();
+-              if (gridY < fxFloorY) {
+-                  gridY = fxFloorY;
+-              }
+-          }
+-
+           console.log(`✅ Found alternative position: (${gridX}, ${gridY})`);
+         }
+ 
+-        // 6. ⭐ SOFT LIMIT: не создаём модуль далеко от группы
+-        const sane = this.layerManager.checkSaneDistance(
+-            layerName, gridX, gridY, gridWidth, gridHeight,
+-        );
+-        if (!sane.ok) {
+-            const near = sane.nearest;
+-            this.showNotification(
+-                `📏 Слишком далеко от модулей (${sane.distance}). Ищем место рядом...`,
+-            );
+-            const freeSpace = this.findFreeSpace(
+-                layerName,
+-                gridWidth,
+-                gridHeight,
+-                near ? near.gridX : 0,
+-                near ? near.gridY : 0,
+-                this.grid.snap ? this.grid.multX : 1,
+-                this.grid.snap ? this.grid.multY : 1,
+-            );
+-            if (freeSpace) {
+-                gridX = freeSpace.gridX;
+-                gridY = freeSpace.gridY;
+-                if (layerName === 'fx') {
+-                    const fxFloorY = this._getFxFloorY();
+-                    if (gridY < fxFloorY) gridY = fxFloorY;
+-                }
+-            }
+-            // Если freeSpace не нашёлся — оставляем исходные gridX/Y:
+-            // лучше создать далеко, чем не создать вовсе.
+-        }
+-
+         // 7. Создаём модуль
+         const newModule = this.moduleFactory.createModule(
+           moduleType,
+@@ -2420,6 +2364,15 @@ class ModularSystem {
+       ctx.restore();
+   }
+ 
++  panelInView(panel) {
++      // Allow for panel outlines and jack highlights at the canvas edges.
++      const margin = 24 * this.scale;
++      const x = panel.pixelX * this.scale + this.offsetX;
++      const y = panel.pixelY * this.scale + this.offsetY;
++      return x <= this.canvas.clientWidth + margin && y <= this.canvas.clientHeight + margin
++          && x + panel.width * this.scale >= -margin && y + panel.height * this.scale >= -margin;
++  }
++
+   drawLayer(layerName) {
+       const layer = this.layerManager.getLayer(layerName);
+       if (!layer) return;
+@@ -2520,7 +2473,7 @@ class ModularSystem {
+           const pixelY = module.gridY * BASE_STEP_Y;
+ 
+           module.setPixelPosition(pixelX, pixelY);
+-          module.draw(this.ctx);
++          if (this.panelInView(module)) module.draw(this.ctx);
+       });
+ 
+       this.ctx.restore();
+@@ -2615,7 +2568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
+ 
+     try {
+         const img = new Image();
+-        img.src = '/splash/art.png';
++        img.src = '/splash/art.webp';
+     } catch {}
+     
+     modularSystem = new ModularSystem();
+diff --git a/src/ModuleFactory.js b/src/ModuleFactory.js
+index fecd811..c857f2c 100644
+--- a/src/ModuleFactory.js
++++ b/src/ModuleFactory.js
+@@ -28,6 +28,8 @@ import { PartSelector } from './components/PartSelector.js';
+ import { BaseJack } from './components/BaseJack.js';
+ import { getEffectiveRating } from './api/moduleRatingStore.js';
+ import { getModuleStatus } from './api/moduleStatusStore.js';
++import { getUiLanguage, getPulvisLanguage, localizeDefinition } from './utils/locale.js';
++import { configurePulvisPanel } from './ui/PulvisPanel.js';
+ 
+ 
+ // ModuleFactory.js
+@@ -120,6 +122,9 @@ export class ModuleFactory {
+                 return false;
+             }
+ 
++            // Resolve UI copy when the module enters the registry. DSP identifiers remain stable.
++            localizeDefinition(moduleDef, lib === 'pulvis' ? getPulvisLanguage() : getUiLanguage());
++
+             // ⭐ Метаданные источника
+             moduleDef.library = lib;
+             moduleDef.type = moduleDef.type || name;
+@@ -161,6 +166,11 @@ export class ModuleFactory {
+         this.moduleRegistry[type] = definition;
+     }
+ 
++    getGridWidth(definition) {
++        return definition?.library === 'pulvis' && definition.pulvisStudio === true
++            ? Math.ceil(definition.width / BASE_STEP_X) : PANEL_GRID_WIDTH;
++    }
++
+     createModule(type, gridX, gridY, layer = null) {
+         if (this.system?.locked) {
+             this.showNotification?.('🔒 Patch is locked');
+@@ -175,7 +185,7 @@ export class ModuleFactory {
+ 
+         // Определяем grid размеры модуля
+         // Ширина панели — всегда 13 клеток (PANEL_WIDTH / BASE_STEP_X)
+-        const gridWidth = PANEL_GRID_WIDTH;
++        const gridWidth = this.getGridWidth(definition);
+         const gridHeight = definition.gridHeight;
+         if (!gridHeight || gridHeight < 1) {
+             console.error(`Module ${type}: gridHeight is missing or invalid`, definition);
+@@ -213,6 +223,10 @@ export class ModuleFactory {
+         panel.originalPixelWidth = definition.width || PANEL_WIDTH;
+         panel.originalPixelHeight = definition.height || (gridHeight * BASE_STEP_Y);
+         
++        if (definition.library === 'pulvis' && definition.pulvisStudio === true) {
++            panel.width = panel.originalWidth = definition.width;
++            configurePulvisPanel(panel, definition);
++        }
+         return panel;
+     }
+ 
+@@ -356,6 +370,21 @@ export class ModuleFactory {
+                     compDef.items || 'One,Two,Three,Four',
+                     compDef.initialIndex || 0
+                 );
++                if (compDef.indexValue) {
++                    component.getValue = () => component.currentIndex;
++                    component.setValue = value => component.setIndex(Math.round(Number(value)));
++                    component.setValueDirect = value => {
++                        component.currentIndex = Math.max(0, Math.min(component.items.length - 1, Math.round(Number(value))));
++                        component.currentItem = component.items[component.currentIndex];
++                    };
++                } else if (compDef.binaryThreshold) {
++                    component.getValue = () => component.currentIndex;
++                    component.setValue = value => component.setIndex(Number(value) >= 0.5 ? 1 : 0);
++                    component.setValueDirect = value => {
++                        component.currentIndex = Number(value) >= 0.5 ? 1 : 0;
++                        component.currentItem = component.items[component.currentIndex];
++                    };
++                }
+                 break;
+ 
+             case 'TextField':
+@@ -789,4 +818,4 @@ export class ModuleFactory {
+         comp.parent = panel;
+         if (comp.setParentModule) comp.setParentModule(panel);
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/src/PatchLoader.js b/src/PatchLoader.js
+index 09b70bc..7dab266 100644
+--- a/src/PatchLoader.js
++++ b/src/PatchLoader.js
+@@ -1,5 +1,4 @@
+ // src/PatchLoader.js
+-import { PANEL_GRID_WIDTH } from './constants.js';
+ import { createFileInput, triggerFileInput } from './utils/fileInput.js';
+ import { Sticker } from './stickers/Sticker.js';
+ import { libraryStore } from './api/index.js';
+@@ -254,7 +253,7 @@ export class PatchLoader {
+         const layerName = area.toUpperCase() === 'FX' ? 'fx' : 'voice';
+ 
+         // ⭐ Для FX: сдвигаем Y, чтобы модуль был ниже всех Voice
+-        if (layerName === 'fx') {
++        if (layerName === 'fx' && moduleDef.coordinateSpace !== 'world') {
+             const fxStartY = this._fxStartY || 0;
+             vpos = fxStartY + vpos;   // оригинальный vpos FX — это offset внутри FX-зоны
+         }
+@@ -262,7 +261,7 @@ export class PatchLoader {
+         await this.ensureModuleLoaded(moduleName, moduleLibrary);
+         
+         // Находим позицию
+-        const position = this.findModulePosition(layerName, hpos, vpos);
++        const position = this.findModulePosition(layerName, hpos, vpos, this.moduleFactory.moduleRegistry[moduleName]);
+         
+         // Создаем модуль
+         const module = this.moduleFactory.createModule(moduleName, position.x, position.y, layerName);
+@@ -296,7 +295,11 @@ export class PatchLoader {
+             if (lib) {
+                 // Проверим, установлена ли библиотека
+                 const libs = await libraryStore.listLibraries();
+-                const libExists = libs.some(l => l.name === lib);
++                const requestedLib = lib;
++                const resolvedLib = lib === 'granular' && libs.some(l => l.name === 'pulvis')
++                    ? 'pulvis'
++                    : lib;
++                const libExists = libs.some(l => l.name === resolvedLib);
+                 if (!libExists) {
+                     throw new Error(
+                         `Patch requires library "${lib}" — not installed. ` +
+@@ -305,13 +308,13 @@ export class PatchLoader {
+                 }
+ 
+                 // Пробуем загрузить
+-                if (await this.moduleFactory.loadModule(lib, moduleName)) {
++                if (await this.moduleFactory.loadModule(resolvedLib, moduleName)) {
+                     // ⭐ Проверим, что registry реально взял из lib
+                     const registered = this.moduleFactory.moduleRegistry[moduleName];
+-                    if (registered && registered.library !== lib) {
++                    if (registered && registered.library !== resolvedLib) {
+                         // Коллизия: type уже был загружен из другой библиотеки
+                         throw new Error(
+-                            `Module "${moduleName}" from library "${lib}" conflicts with ` +
++                            `Module "${moduleName}" from library "${resolvedLib}" conflicts with ` +
+                             `already-loaded "${registered.library}/${moduleName}" ` +
+                             `(Csound opcode "${moduleName}" is global — only one can be loaded). ` +
+                             `Remove the conflicting module or use a different type.`
+@@ -321,7 +324,7 @@ export class PatchLoader {
+                 }
+ 
+                 throw new Error(
+-                    `Module "${moduleName}" not found in library "${lib}" ` +
++                    `Module "${moduleName}" not found in library "${requestedLib}" ` +
+                     `(library is installed, but module is missing).`
+                 );
+             }
+@@ -350,15 +353,17 @@ export class PatchLoader {
+         }
+     }
+     
+-    findModulePosition(layerName, preferredX, preferredY) {
+-        if (this.system.isGridCellFree(layerName, preferredX, preferredY, PANEL_GRID_WIDTH, 1)) {
++    findModulePosition(layerName, preferredX, preferredY, definition) {
++        const width = this.moduleFactory.getGridWidth(definition);
++        const height = definition?.gridHeight || 1;
++        if (this.system.isGridCellFree(layerName, preferredX, preferredY, width, height)) {
+             return { x: preferredX, y: preferredY };
+         }
+         
+-        const freeSpace = this.system.findFreeSpace(layerName, PANEL_GRID_WIDTH, 1, preferredX, preferredY);
++        const freeSpace = this.system.findFreeSpace(layerName, width, height, preferredX, preferredY);
+         if (freeSpace) {
+             dlog(`Position occupied, moving to [${freeSpace.gridX}, ${freeSpace.gridY}]`);
+-            return freeSpace;
++            return { x: freeSpace.gridX, y: freeSpace.gridY };
+         }
+         
+         return { x: preferredX, y: preferredY };
+diff --git a/src/api/libraryStore.tauri.js b/src/api/libraryStore.tauri.js
+index 2d05069..c957179 100644
+--- a/src/api/libraryStore.tauri.js
++++ b/src/api/libraryStore.tauri.js
+@@ -140,6 +140,7 @@ class TauriLibraryStore {
+                         result.set(m.name, {
+                             name: m.name,
+                             displayName: m.displayName || m.name,
++                            displayNameI18n: m.displayNameI18n,
+                             category: m.category || 'custom',
+                             status: m.status || 'dev',
+                         });
+@@ -485,4 +486,4 @@ class TauriLibraryStore {
+     }
+ }
+ 
+-export const libraryStore = new TauriLibraryStore();
+\ No newline at end of file
++export const libraryStore = new TauriLibraryStore();
+diff --git a/src/api/libraryStore.web.js b/src/api/libraryStore.web.js
+index 292d85a..cceb62e 100644
+--- a/src/api/libraryStore.web.js
++++ b/src/api/libraryStore.web.js
+@@ -153,6 +153,7 @@ class WebLibraryStore {
+                             result.set(m.name, {
+                                 name: m.name,
+                                 displayName: m.displayName || m.name,
++                                displayNameI18n: m.displayNameI18n,
+                                 category: m.category || 'custom',
+                                 status: m.status || 'dev',
+                             });
+@@ -485,4 +486,4 @@ class WebLibraryStore {
+     }
+ }
+ 
+-export const libraryStore = new WebLibraryStore();
+\ No newline at end of file
++export const libraryStore = new WebLibraryStore();
+diff --git a/src/components/Panel.js b/src/components/Panel.js
+index ab8be60..3228b67 100644
+--- a/src/components/Panel.js
++++ b/src/components/Panel.js
+@@ -4,7 +4,6 @@ import {
+   PANEL_GRID_WIDTH,
+   BASE_STEP_X,
+   BASE_STEP_Y,
+-  MAX_SANE_DISTANCE_GRID
+ } from '../constants.js';
+ 
+ export class Panel {
+@@ -102,7 +101,9 @@ export class Panel {
+     ctx.globalAlpha = this.opacity;
+ 
+     // === ФОН ПАНЕЛИ ===
+-    if (isLcd) {
++    if (this.customColor) {
++      ctx.fillStyle = this.customColor;
++    } else if (isLcd) {
+       ctx.fillStyle = theme.getSurfaceColor();
+     } else {
+       const bgColor = this.customColor || this.defaultColor || '#606060';
+@@ -332,29 +333,6 @@ export class Panel {
+ 
+           if (!canMove) return;
+ 
+-          // ⭐ SOFT LIMIT: не даём улететь далеко от группы
+-          const sane = systemRef.layerManager?.checkSaneDistance(
+-              this.layer,
+-              targetGridX,
+-              targetGridY,
+-              this.gridWidth,
+-              this.gridHeight,
+-              this,
+-          );
+-
+-          if (sane && !sane.ok) {
+-              // Throttle уведомления — не чаще 600мс
+-              const now = performance.now();
+-              if (!systemRef._lastSaneWarnAt || now - systemRef._lastSaneWarnAt > 600) {
+-                  systemRef._lastSaneWarnAt = now;
+-                  systemRef.showNotification?.(
+-                      `📏 Слишком далеко от ближайшего модуля ` +
+-                      `(${sane.distance} > ${MAX_SANE_DISTANCE_GRID})`,
+-                  );
+-              }
+-              return;
+-          }
+-
+           this.gridX = targetGridX;
+           this.gridY = targetGridY;
+           this.lastValidGridX = targetGridX;
+diff --git a/src/csound/CsoundEngine.js b/src/csound/CsoundEngine.js
+index 2f9c7e2..61eb4f8 100644
+--- a/src/csound/CsoundEngine.js
++++ b/src/csound/CsoundEngine.js
+@@ -3,9 +3,9 @@
+ // Единая точка работы с Csound.
+ // Все обращения к Csound-инстансу — только через этот класс.
+ //
+-// Версия: @csound/browser 6.18.7 (через CDN unpkg)
+-
+-//export const CSOUND_VERSION = '6.18.7';
++// Runtime: @csound/browser 7.0.0-beta33, loaded from unpkg.
++import { GrainSamples } from './GrainSamples.js';
++import { localizePulvis as localize } from '../utils/locale.js';
+ export const CSOUND_VERSION = '7.0.0-beta33';
+ export const CSOUND_CDN = `https://www.unpkg.com/@csound/browser@${CSOUND_VERSION}/dist/csound.js`;
+ 
+@@ -17,6 +17,9 @@ export class CsoundEngine {
+         this.lastRecompileMs = null;
+         this.lastRecompileAt = null;
+         this.isRecompiling = false;
++        this.grainSamples = new GrainSamples();
++        this._audioOperations = Promise.resolve();
++        this._loadingGrainSample = false;
+         // Подписчики на события
+         this._stateListeners = [];
+         this._messageListeners = [];
+@@ -26,6 +29,7 @@ export class CsoundEngine {
+         this._ledPollInterval = null;      // setInterval id
+         // ⭐ Scope-каналы
+         this._scopeTables = new Map();     // cableId -> tableNum
++        this._pulvisScopes = new Map();
+         this._scopeBuffers = new Map();    // cableId -> Float64Array
+         this._scopePollInterval = null;
+     }
+@@ -78,7 +82,22 @@ export class CsoundEngine {
+     // ЖИЗНЕННЫЙ ЦИКЛ
+     // ============================================
+ 
+-    async init() {
++    _scheduleAudio(operation) {
++        const result = this._audioOperations.then(operation);
++        this._audioOperations = result.catch(() => {});
++        return result;
++    }
++
++    init() { return this._scheduleAudio(() => this._init()); }
++    stop() { return this._scheduleAudio(() => this._stop()); }
++    recompile({ onlyIfRunning = false } = {}) {
++        return this._scheduleAudio(() => {
++            if (onlyIfRunning && this.state !== 'running') return true;
++            return this._recompile();
++        });
++    }
++
++    async _init() {
+         if (this.state === 'initializing') {
+             console.warn('[CsoundEngine] Already initializing');
+             return false;
+@@ -109,6 +128,7 @@ export class CsoundEngine {
+             window.csound = this.instance;
+ 
+             this._attachCsoundListeners();
++            await this.grainSamples.upload(this.instance);
+ 
+             await this.instance.setOption('-odac');
+             await this.instance.setOption('-M0');       mark('setOptions');
+@@ -141,7 +161,9 @@ export class CsoundEngine {
+                 this._ensureLedPolling();
+             }
+ 
+-            if (this._scopeTables.size > 0) {
++            for (const id of this._pulvisScopes.keys()) this._scopeBuffers.delete(id);
++            this._pulvisScopes = new Map(this.system.csoundGen.pulvisScopeTables);
++            if (this._scopeTables.size || this._pulvisScopes.size) {
+                 if (this._scopePollInterval) {
+                     clearInterval(this._scopePollInterval);
+                     this._scopePollInterval = null;
+@@ -155,7 +177,7 @@ export class CsoundEngine {
+         } catch (error) {
+             console.error('[CsoundEngine] Init error:', error);
+             this._emitMessage(error.message || String(error), 'error');
+-            this.instance = null;
++            await this._destroyInstance();
+             this._setState('error', error.message);
+             return false;
+ 
+@@ -164,7 +186,48 @@ export class CsoundEngine {
+         }
+     }
+ 
+-    async stop() {
++    async loadGrainSample(slot, file) {
++        if (this._loadingGrainSample || this.isRecompiling || this.state === 'initializing') {
++            throw new Error(localize({en:'Wait for the current audio operation to finish.',zh:'请等待当前音频操作完成。',ru:'Дождитесь завершения текущей операции со звуком.'}));
++        }
++        this._loadingGrainSample = true;
++        try {
++            return await this._scheduleAudio(() => this._replaceGrainSample(slot, file));
++        } finally {
++            this._loadingGrainSample = false;
++        }
++    }
++
++    async _replaceGrainSample(slot, file) {
++        const previous = this.grainSamples.slots.get(slot);
++        const wasRunning = this.state === 'running';
++        try {
++            const entry = await this.grainSamples.load(slot, file);
++            // Restart rebuilds tables atomically; no voice reads a replaced table.
++            if (wasRunning) {
++                await this._stop();
++                if (!await this._init()) throw new Error(localize({
++                    en: 'Csound could not load this WAV. Check that its audio encoding is supported.',
++                    zh: 'Csound 无法读取该 WAV，请检查音频编码是否受支持。',
++                    ru: 'Csound не смог прочитать WAV. Проверьте, поддерживается ли формат аудиоданных.',
++                }));
++            }
++            return entry;
++        } catch (error) {
++            if (previous) this.grainSamples.slots.set(slot, previous);
++            else this.grainSamples.slots.delete(slot);
++            if (wasRunning && this.state !== 'running' && !await this._init()) {
++                throw new Error(localize({
++                    en: 'WAV import failed. The previous slot was restored, but audio could not restart.',
++                    zh: 'WAV 导入失败。已恢复原采样槽，音频引擎重启失败。',
++                    ru: 'Ошибка импорта WAV. Слот восстановлен, но перезапуск звука не удался.',
++                }), { cause: error });
++            }
++            throw error;
++        }
++    }
++
++    async _stop() {
+         if (this.state === 'idle') {
+             //console.log('[CsoundEngine] Already stopped');
+             return;
+@@ -196,9 +259,9 @@ export class CsoundEngine {
+     // ГОРЯЧАЯ ЗАМЕНА ORC
+     // ============================================
+ 
+-    async recompile() {
++    async _recompile() {
+         if (this.state !== 'running' || !this.instance) {
+-            return this.init();
++            return this._init();
+         }
+ 
+         console.log('[CsoundEngine] Recompiling via reset + compileOrc...');
+@@ -208,6 +271,7 @@ export class CsoundEngine {
+ 
+         try {
+             await this.instance.reset();                mark('reset');
++            await this.grainSamples.upload(this.instance);
+ 
+             await this.instance.setOption('-odac');
+             await this.instance.setOption('-M0');       
+@@ -228,7 +292,8 @@ export class CsoundEngine {
+ 
+             // Note: @csound/browser readScore() returns Promise<undefined> — no status code.
+             // Do not compare against 0. Rely on try/catch + Csound message channel instead.
+-            await this.instance.compileOrc(orc);
++            const result = await this.instance.compileOrc(orc);
++            if (result !== 0) throw new Error(`ORC compilation failed (code ${result}).`);
+ 
+             const sco = this.system.csoundGen.generateSco();
+             await this.instance.readScore(sco);
+@@ -247,7 +312,9 @@ export class CsoundEngine {
+                 this._ensureLedPolling();
+             }
+ 
+-            if (this._scopeTables.size > 0) {
++            for (const id of this._pulvisScopes.keys()) this._scopeBuffers.delete(id);
++            this._pulvisScopes = new Map(this.system.csoundGen.pulvisScopeTables);
++            if (this._scopeTables.size || this._pulvisScopes.size) {
+                 if (this._scopePollInterval) {
+                     clearInterval(this._scopePollInterval);
+                     this._scopePollInterval = null;
+@@ -264,8 +331,8 @@ export class CsoundEngine {
+         } catch (e) {
+             console.error('[CsoundEngine] recompile via reset failed:', e);
+             console.log('[CsoundEngine] Falling back to full restart...');
+-            await this.stop();
+-            return this.init();
++            await this._stop();
++            return this._init();
+         } finally {
+             this.isRecompiling = false;
+         }
+@@ -505,17 +572,29 @@ export class CsoundEngine {
+ 
+         this._scopePollInterval = setInterval(async () => {
+             if (this.state !== 'running' || !this.isReady()) return;
+-            if (this._scopeTables.size === 0) return;
++            const instance = this.instance;
++            const scopes = this._pulvisScopes;
++            if (this.isRecompiling || this._scopeReadPending === scopes) return;
++            this._scopeReadPending = scopes;
++            try {
+ 
+-            for (const [cableId, tableNum] of this._scopeTables) {
+-                try {
+-                    const data = await this.instance.tableCopyOut(tableNum);
+-                    if (data) {
+-                        this._scopeBuffers.set(cableId, data);
++                for (const [cableId, tableNum] of [...this._scopeTables, ...scopes]) {
++                    if (instance !== this.instance || scopes !== this._pulvisScopes) break;
++                    try {
++                        const data = await instance.tableCopyOut(tableNum);
++                        if (data && instance === this.instance && scopes === this._pulvisScopes && this.state === 'running') {
++                            this._scopeBuffers.set(cableId, data);
++                        }
++                    } catch (e) {
++                        // тихо
+                     }
+-                } catch (e) {
+-                    // тихо
+                 }
++                if (scopes.size) {
++                    this.system._voiceDirty = true;
++                    this.system._fxDirty = true;
++                }
++            } finally {
++                if (this._scopeReadPending === scopes) this._scopeReadPending = null;
+             }
+         }, 33);   // ~30 Hz
+     }
+@@ -579,4 +658,4 @@ export class CsoundEngine {
+         
+         console.warn('[CsoundEngine] No message listener API found');
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/src/csound/CsoundGenerator.js b/src/csound/CsoundGenerator.js
+index d903410..cdc2adb 100644
+--- a/src/csound/CsoundGenerator.js
++++ b/src/csound/CsoundGenerator.js
+@@ -28,6 +28,7 @@ export class CsoundGenerator {
+         for (const udo of BASE_UDOS) this.includes.add(udo); 
+         // ⭐ Scope tables
+         this._scopeTables = new Map();      // cableId -> { tableNum, bus, isAudio }
++        this.pulvisScopeTables = new Map();
+         this._scopeTableCounter = 9000;
+ 
+         // ⭐ UDO text cache (invalidation via invalidateUdoCache())
+@@ -39,23 +40,8 @@ export class CsoundGenerator {
+         this._numVoices = 8;
+         }
+ 
+-    // ════════════════════════════════════════════════════════════
+-    //  ⭐ ZAK/SIZE INVARIANT
+-    //  ────────────────────────────────────────────────────────────
+-    //  _audioBusCounter / _controlBusCounter — «следующий свободный».
+-    //  _audioBusCount  / _controlBusCount   — «сколько объявить в zakinit».
+-    //
+-    //  Инвариант: _count >= _counter  ВСЕГДА.
+-    //
+-    //  Каждый, кто двигает _counter, ОБЯЗАН синхронизировать _count.
+-    //  Места:
+-    //    • _assignBusNumberToCable  (новый кабель)
+-    //    • _allocateBus             (tap-шины индикаторов)
+-    //    • _prepareConverters       (K2A / A2K)
+-    //
+-    //  _updateZakInit() — только страховка: _count = max(_count, _counter).
+-    //  Не пересчитывает по кабелям (это ломало инвариант).
+-    // ════════════════════════════════════════════════════════════
++    // Cable counters persist across graph edits. Counts also include the temporary
++    // converter and meter buses used by the orchestra currently being generated.
+ 
+     /**
+      * Загрузить UDO по пути, как он хранится в this.includes.
+@@ -146,18 +132,33 @@ export class CsoundGenerator {
+     }
+ 
+     async loadAllUdoContents() {
+-        const udoContents = [];
+-        for (const filename of this.includes) {
+-            const content = await this._loadUdoByPath(filename);
+-            if (content) udoContents.push(content);
+-        }
+-        return udoContents;
++        return this._loadOrderedUdos();
++    }
++
++    // Shared UDO dependencies precede their callers and are emitted once.
++    async _loadOrderedUdos() {
++        const contents = [], visited = new Set(), visiting = new Set();
++        const visit = async (path, required = false) => {
++            if (visited.has(path)) return;
++            if (visiting.has(path)) throw new Error(`Circular UDO dependency: ${path}`);
++            visiting.add(path);
++            const content = await this._loadUdoByPath(path);
++            if (!content) throw new Error(`UDO ${required ? 'dependency ' : ''}not available: ${path}`);
++            for (const match of content.matchAll(/^;\s*@\s*requires\s+([A-Za-z0-9_-]+\.txt)\s*$/gm)) {
++                await visit(match[1], true);
++            }
++            visiting.delete(path);
++            visited.add(path);
++            contents.push(content);
++        };
++        for (const path of [...this.includes].sort()) await visit(path);
++        return contents;
+     }
+ 
+     async generateOrc() {
+         await this._loadVariantsForModules(); 
+         this._prepareVariants();  
+-        this._prepareConverters();
++
+         // ⭐ Scope code
+         const scopeCode = this._generateScopeCode();
+         // ⭐ 0. Собираем mapping ftgen (перед остальным)
+@@ -165,22 +166,9 @@ export class CsoundGenerator {
+         
+         this._fetchStats = { count: 0, ms: 0, byPath: {} };
+ 
+-        const includesList = Array.from(this.includes).sort();
+-        const udoTexts = await Promise.all(
+-            includesList.map(p => this._loadUdoByPath(p))
+-        );
+-
+-        const udoContents = udoTexts.map((content, i) => {
+-            if (content) return content;
+-            const filename = includesList[i];
+-            console.warn(`⚠️ UDO not available: ${filename}`);
+-            const opcodeName = filename.replace(/^.*\//, '').replace(/\.txt$/, '');
+-            return (
+-                `; UDO ${filename} not found\n` +
+-                `opcode ${opcodeName}, 0, 0\n` +
+-                `; empty\nendop`
+-            );
+-        });
++        const udoContents = await this._loadOrderedUdos();
++        const sampleTables = udoContents.some(text => /opcode\s+GrainSample\s*,/.test(text))
++            ? this.system.csoundEngine.grainSamples.orchestra() : '';
+ 
+         const udoString = udoContents.join('\n\n');
+ 
+@@ -199,6 +187,16 @@ export class CsoundGenerator {
+         const voiceModuleList = Array.from(this.modules.values())
+             .filter(m => m.layer === 'voice');
+ 
++        // Size the shared voice layout once. Only voice zero and FX publish meters.
++        this._audioBusCount = this._audioBusCounter;
++        this._controlBusCount = this._controlBusCounter;
++        this._prepareConverters();
++        // ⭐ FX-модули (как раньше, один instr 2)
++        const fxModules = Array.from(this.modules.values())
++            .filter(m => m.layer === 'fx')
++            .map(m => this.formatModuleLine(m))
++            .join('\n');
++
+         let voiceInstrs = '';
+         for (let v = 0; v < numVoices; v++) {
+             const voiceModulesCode = voiceModuleList
+@@ -227,12 +225,6 @@ export class CsoundGenerator {
+     `;
+         }
+ 
+-        // ⭐ FX-модули (как раньше, один instr 2)
+-        const fxModules = Array.from(this.modules.values())
+-            .filter(m => m.layer === 'fx')
+-            .map(m => this.formatModuleLine(m))
+-            .join('\n');
+-
+         // ⭐ 3. Zakinit
+         const zakinitString = this.getZakInitString();
+         
+@@ -310,6 +302,7 @@ export class CsoundGenerator {
+     ${scopeCode.ftgens}
+     ;---------------------------------
+     ; UDO section (inlined from /csound/modules/*.txt)
++    ${sampleTables}
+     ${udoString}
+     ;---------------------------------
+     ; VOICE AREA (instr 100..100+N-1)
+@@ -468,11 +461,26 @@ export class CsoundGenerator {
+     }
+ 
+     _generateScopeCode() {
+-        if (this._scopeTables.size === 0) {
+-            return { ftgens: '; no scope tables', voiceTables: '', fxTables: '' };
+-        }
+-
++        const previous = this.pulvisScopeTables;
++        this.pulvisScopeTables = new Map();
+         const ftgenLines = [];
++        for (const module of this.modules.values()) {
++            const panel = this.getPanelById(module.instanceId);
++            if (!panel?.pulvisControls) continue;
++            const key = panel.moduleId;
++            let display = previous.get(key + ':display');
++            if (display === undefined) {
++                display = this._scopeTableCounter;
++                this._scopeTableCounter += 3;
++            }
++            this.pulvisScopeTables.set(key + ':display', display);
++            this.pulvisScopeTables.set(key, display + 1);
++            this.pulvisScopeTables.set(key + ':spectrum', display + 2);
++            // GrainCore writes the module's post-level output before Zak routing.
++            ftgenLines.push(`giPulvisDisplay_${display} ftgen ${display}, 0, -672, -2, 0`);
++            ftgenLines.push(`giScope_${display + 1} ftgen ${display + 1}, 0, -4097, -2, 0`);
++            ftgenLines.push(`giSpectrum_${display + 2} ftgen ${display + 2}, 0, -1025, -2, 0`);
++        }
+         const voiceLines = [];
+         const fxLines = [];
+ 
+@@ -564,15 +572,8 @@ export class CsoundGenerator {
+                     continue;
+                 }
+                 
+-                let newBus;
+-                if (inputRate === 'audio') {
+-                    newBus = this._audioBusCounter++;
+-                    this._audioBusCount = this._audioBusCounter;    // ⭐ синхронизация
+-                } else {
+-                    newBus = this._controlBusCounter++;
+-                    this._controlBusCount = this._controlBusCounter; // ⭐ синхронизация
+-                }
+-                
++                const newBus = this._allocateBus(inputRate);
++
+                 const key = `${cable.id}_${inputId}`;
+                 this._converterBuses[key] = {
+                     type: convType,
+@@ -657,7 +658,7 @@ export class CsoundGenerator {
+                 // Проверяем, не использует ли этот номер другой кабель (от того же выхода)
+                 const isShared = this._activeCables.some(c => 
+                     c.id !== cable.id && 
+-                    this._cableBusMap[c.id] === busNumber
++                    this._cableBusMap[c.id] === busNumber && this._getCableType(c) === cableType
+                 );
+                 
+                 if (!isShared) {
+@@ -1077,8 +1078,8 @@ export class CsoundGenerator {
+         });
+ 
+         // ⭐ 3. Индикаторы: LED и MiniVU
+-        const leds = (panel?.components || []).filter(c => c.constructor.name === 'LED');
+-        const mvus = (panel?.components || []).filter(c => c.constructor.name === 'MiniVU');
++        const leds = voiceId === 0 ? (panel?.components || []).filter(c => c.constructor.name === 'LED') : [];
++        const mvus = voiceId === 0 ? (panel?.components || []).filter(c => c.constructor.name === 'MiniVU') : [];
+ 
+         // Карта tap-точек: ключ = `${dir}:${componentId}` → { bus, type, a2kBus }
+         // dir = 'output' | 'input'
+@@ -1195,6 +1196,8 @@ export class CsoundGenerator {
+             ...outletBuses.map(b => String(this._busNumber(b.bus, b.type, voiceId))),
+             ...extraArgs,
+         ];
++        const display = this.pulvisScopeTables.get(panel?.moduleId + ':display');
++        if (display !== undefined) allArgs.push(String(voiceId === 0 ? display : 0));
+         const callLine = `${moduleName} ${allArgs.join(', ')}`;
+ 
+         // ⭐ 7. Конвертеры — sourceBus и bus со сдвигом по типу
+@@ -1288,19 +1291,14 @@ export class CsoundGenerator {
+             mvuLines.push(`mVU_rms ${bus}, "${channelName}"`);
+         }
+ 
+-        // ⭐ 12. Финальная сборка
+-        // LED/MiniVU — только для voice 0 (индикаторы не нужны в остальных голосах)
+-        const finalLedLines = (voiceId === 0) ? ledLines : [];
+-        const finalMvuLines = (voiceId === 0) ? mvuLines : [];
+-
+         const result = [
+             ...chngetLines,
+             ...converterLines,
+             ...tapA2KInputLines,
+             callLine,
+             ...tapA2KOutputLines,
+-            ...finalLedLines,
+-            ...finalMvuLines,
++            ...ledLines,
++            ...mvuLines,
+         ].join('\n');
+ 
+         return result;
+@@ -1477,6 +1475,7 @@ export class CsoundGenerator {
+         this._audioBusCount = 2;
+         this._controlBusCount = 2;
+         this._scopeTables.clear();
++        this.pulvisScopeTables.clear();
+         this._scopeTableCounter = 9000;
+         this.log('🔄 Reset'); 
+         //this.showFullCsd();
+@@ -1518,14 +1517,7 @@ export class CsoundGenerator {
+      * @returns {number} номер шины
+      */
+     _allocateBus(type) {
+-        if (type === 'audio') {
+-            const bus = this._audioBusCounter++;
+-            this._audioBusCount = this._audioBusCounter;
+-            return bus;
+-        }
+-        const bus = this._controlBusCounter++;
+-        this._controlBusCount = this._controlBusCounter;
+-        return bus;
++        return type === 'audio' ? this._audioBusCount++ : this._controlBusCount++;
+     }
+ 
+     /**
+@@ -1536,6 +1528,7 @@ export class CsoundGenerator {
+      * @returns {number}
+      */
+     _busNumber(localBus, type, voiceId = 0) {
++        if (localBus < 2) return localBus;
+         if (type === 'audio') {
+             return localBus + voiceId * this._audioBusCount;
+         }
+@@ -1579,4 +1572,4 @@ export class CsoundGenerator {
+     }
+ 
+ 
+-}
+\ No newline at end of file
++}
+diff --git a/src/csound/GrainSamples.js b/src/csound/GrainSamples.js
+new file mode 100644
+index 0000000..a497375
+--- /dev/null
++++ b/src/csound/GrainSamples.js
+@@ -0,0 +1,105 @@
++import { localizePulvis as localize } from '../utils/locale.js';
++// File transport and metadata validation only. Csound decodes and processes audio.
++export class GrainSamples {
++    static MAX_FILE_BYTES = 256 * 1024 * 1024;
++    static MAX_SESSION_BYTES = 512 * 1024 * 1024;
++    static MAX_FILE_SECONDS = 300;
++    // GEN01 expands each mono sample into the build's double-precision Csound table.
++    static MAX_SESSION_FRAMES = 48_000_000;
++
++    constructor() {
++        this.slots = new Map();
++        this.revision = 0;
++        this.uploaded = new WeakMap();
++    }
++
++    async load(slot, file) {
++        if (!Number.isInteger(slot) || slot < 1 || slot > 8) throw new Error(localize({"en":"Sample slot must be 1 to 8.","zh":"采样槽必须是 1 到 8。","ru":"Номер слота должен быть от 1 до 8."}));
++        if (!file || typeof file.arrayBuffer !== 'function' || !Number.isFinite(file.size) || file.size < 44) throw new Error(localize({"en":"Choose a valid WAV file.","zh":"请选择有效的 WAV 文件。","ru":"Выберите корректный файл WAV."}));
++        if (file.size > GrainSamples.MAX_FILE_BYTES) throw new Error(localize({"en":"Each WAV file must be no larger than 256 MiB.","zh":"单个 WAV 文件不能超过 256 MiB。","ru":"Размер одного WAV не должен превышать 256 МиБ."}));
++        const previous = this.slots.get(slot);
++        const sessionBytes = [...this.slots.values()].reduce((sum, entry) => sum + entry.bytes.length, 0)
++            - (previous?.bytes.length ?? 0);
++        if (sessionBytes + file.size > GrainSamples.MAX_SESSION_BYTES) throw new Error(localize({"en":"This session supports up to 512 MiB of WAV files. Reload the app to clear samples.","zh":"当前会话最多可载入 512 MiB 的 WAV 文件，请先关闭应用后重新选择文件。","ru":"В одном сеансе можно загрузить до 512 МиБ WAV. Перезагрузите приложение, чтобы очистить сэмплы."}));
++        const bytes = new Uint8Array(await file.arrayBuffer());
++        if (bytes.length !== file.size) throw new Error(localize({"en":"Could not read the complete file. Retry or choose a smaller WAV.","zh":"无法完整读取该文件，请重试或选择较小的 WAV 文件。","ru":"Не удалось прочитать файл полностью. Повторите попытку или выберите WAV меньшего размера."}));
++        const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
++        const tag = offset => String.fromCharCode(...bytes.subarray(offset, offset + 4));
++        if (tag(0) !== 'RIFF' || tag(8) !== 'WAVE') throw new Error(localize({"en":"Expected RIFF/WAVE. RF64 and big-endian WAV are not supported.","zh":"文件不是标准 RIFF/WAVE 格式；暂不支持 RF64 和大端 WAV。","ru":"Требуется RIFF/WAVE. RF64 и WAV с обратным порядком байтов не поддерживаются."}));
++        const riffEnd = 8 + view.getUint32(4, true);
++        let format, frames = 0;
++        for (let offset = 12; offset + 8 <= riffEnd && offset + 8 <= bytes.length;) {
++            const size = view.getUint32(offset + 4, true), start = offset + 8;
++            if (riffEnd > bytes.length || start + size > riffEnd) throw new Error(localize({"en":"WAV data is incomplete; the file may be damaged.","zh":"WAV 文件数据不完整，文件可能已损坏。","ru":"Данные WAV неполны; возможно, файл повреждён."}));
++            if (tag(offset) === 'fmt ' && size >= 16) {
++                let code = view.getUint16(start, true);
++                if (code === 0xfffe && size >= 40) {
++                    const tail = [0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71];
++                    const extensionSize = view.getUint16(start + 16, true);
++                    const standardGuid = extensionSize >= 22 && extensionSize <= size - 18
++                        && view.getUint16(start + 28, true) === 0
++                        && view.getUint16(start + 30, true) === 0x0010
++                        && tail.every((v, i) => bytes[start + 32 + i] === v);
++                    if (!standardGuid) throw new Error(localize({"en":"This WAV uses an unsupported extended audio encoding.","zh":"该 WAV 使用了不支持的扩展音频编码。","ru":"Этот WAV использует неподдерживаемый расширенный формат аудио."}));
++                    code = view.getUint32(start + 24, true);
++                }
++                format = { code, channels: view.getUint16(start + 2, true),
++                    rate: view.getUint32(start + 4, true), align: view.getUint16(start + 12, true), bits: view.getUint16(start + 14, true) };
++            }
++            if (tag(offset) === 'data') frames += size;
++            offset = start + size + size % 2;
++        }
++        if (!format || ![1, 3].includes(format.code) || ![1, 2].includes(format.channels)
++            || ![8, 16, 24, 32, 64].includes(format.bits) || (format.code === 3 && ![32, 64].includes(format.bits))
++            || (format.code === 1 && format.bits === 64)
++            || format.align !== format.channels * format.bits / 8 || format.rate < 8000 || format.rate > 192000
++            || frames % format.align !== 0 || frames / format.align < 2) {
++            throw new Error(localize({"en":"Use mono/stereo WAV, 8–192 kHz, PCM 8/16/24/32-bit or IEEE float32/64, with at least 2 audio frames.","zh":"WAV 格式暂不支持。请使用 8–192 kHz、单声道或立体声的 PCM 8/16/24/32 位、IEEE float32/64，且文件至少包含 2 帧音频。","ru":"Используйте моно/стерео WAV, 8–192 кГц, PCM 8/16/24/32 бит или IEEE float32/64, не менее 2 кадров."}));
++        }
++        const frameCount = frames / format.align;
++        const seconds = frameCount / format.rate;
++        if (seconds > GrainSamples.MAX_FILE_SECONDS) throw new Error(localize({"en":"Each WAV may be up to 5 minutes long.","zh":"单个 WAV 最长支持 5 分钟。","ru":"Длительность одного WAV не должна превышать 5 минут."}));
++        const sessionFrames = [...this.slots.values()].reduce((sum, entry) => sum + entry.frames, 0)
++            - (previous?.frames ?? 0);
++        if (sessionFrames + frameCount > GrainSamples.MAX_SESSION_FRAMES) {
++            throw new Error(localize({"en":"Decoded samples exceed 48 million mono frames. Reload the app and load fewer or shorter samples.","zh":"当前会话的采样总时长或采样率过高。单声道解码缓冲最多支持 4,800 万帧；请关闭应用并减少已载入采样。","ru":"Превышен предел 48 миллионов монофонических кадров. Перезагрузите приложение и загрузите меньше сэмплов или укоротите их."}));
++        }
++        const entry = { bytes, frames: frameCount, name: file.name, path: `grain-${slot}-${++this.revision}.wav` };
++        this.slots.set(slot, entry);
++        return entry;
++    }
++
++    async upload(csound) {
++        let paths = this.uploaded.get(csound);
++        if (!paths) { paths = new Set(); this.uploaded.set(csound, paths); }
++        // reset() retains files. Remove superseded revisions before writing the next bank.
++        const active = new Set(Array.from(this.slots.values(), entry => entry.path));
++        for (const path of paths) {
++            if (!active.has(path)) {
++                await csound.fs.unlink(path);
++                paths.delete(path);
++            }
++        }
++        for (const { path, bytes } of this.slots.values()) {
++            // reset() preserves the virtual filesystem. beta33 must not overwrite files.
++            if (paths.has(path)) continue;
++            // beta33 reports only the last buffer size to GEN01 after appendFile.
++            await csound.fs.writeFile(path, bytes);
++            paths.add(path);
++        }
++    }
++
++    orchestra() {
++        const lines = [];
++        for (let slot = 1; slot <= 8; slot++) {
++            const entry = this.slots.get(slot);
++            lines.push(entry
++                ? `giGrainSample${slot} ftgen 0, 0, 0, -1, "${entry.path}", 0, 0, 1`
++                : `giGrainSample${slot} ftgen 0, 0, 2, -2, 0`);
++        }
++        lines.push(`giGrainSampleTables[] fillarray ${Array.from({ length: 8 }, (_, i) => `giGrainSample${i + 1}`).join(', ')}`);
++        lines.push(`giGrainSampleFrames[] fillarray ${Array.from({ length: 8 }, (_, i) => `ftlen(giGrainSample${i + 1})`).join(', ')}`);
++        lines.push(`giGrainSampleRates[] fillarray ${Array.from({ length: 8 }, (_, i) => this.slots.has(i + 1) ? `ftsr(giGrainSample${i + 1})` : 'sr').join(', ')}`);
++        return lines.join('\n');
++    }
++}
+diff --git a/src/managers/EventManager.js b/src/managers/EventManager.js
+index 1fa7ea6..0eb405c 100644
+--- a/src/managers/EventManager.js
++++ b/src/managers/EventManager.js
+@@ -25,6 +25,17 @@ export class EventManager {
+     this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+     this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+     this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
++    window.addEventListener('mousemove', e => {
++      if (this.system.isPanning && e.target !== this.canvas) this.handleMouseMove(e);
++    });
++    window.addEventListener('mouseup', e => {
++      if (this.system.isPanning) this.handleMouseUp(e);
++    });
++    window.addEventListener('blur', () => {
++      this._spacePressed = false;
++      this.system.isPanning = false;
++      this.canvas.style.cursor = 'default';
++    });
+     this.canvas.addEventListener('wheel', (e) => this.handleMouseWheel(e));
+     this.canvas.addEventListener('contextmenu', (e) =>
+       this.handleContextMenu(e),
+@@ -75,8 +86,8 @@ export class EventManager {
+     const x = e.clientX - rect.left;
+     const y = e.clientY - rect.top;
+ 
+-    // ⭐ SPACE+DRAG → pan мира
+-    if (this._spacePressed || e.button === 1) {
++    // Space+left drag or middle drag pans even over modules.
++    if ((this._spacePressed && e.button === 0) || e.button === 1) {
+       this.system.isPanning = true;
+       this.system.startPanX = x;
+       this.system.startPanY = y;
+@@ -86,6 +97,13 @@ export class EventManager {
+       e.preventDefault();
+       return;
+     }
++    // A secondary click opens the context menu without moving a panel or changing an OLED control.
++    if (e.button !== 0) return;
++    if (e.ctrlKey) {
++      e.preventDefault();
++      this.openContextMenuAtPosition(e.clientX, e.clientY);
++      return;
++    }
+     // ⭐ Вычисляем мировые координаты
+     const worldX = (x - this.system.offsetX) / this.system.scale;
+     const worldY = (y - this.system.offsetY) / this.system.scale;
+@@ -211,11 +229,15 @@ export class EventManager {
+     }
+ 
+     // === КЛИК НА ПУСТОМ МЕСТЕ ===
+-    if (e.button === 2 || e.ctrlKey) {
+-      e.preventDefault();
+-      this.openContextMenuAtPosition(e.clientX, e.clientY);
++    if (e.button === 0) {
+       this.system.deselectModule();
+-      return;
++      this.system.isPanning = true;
++      this.system.startPanX = x;
++      this.system.startPanY = y;
++      this.system.startOffsetX = this.system.offsetX;
++      this.system.startOffsetY = this.system.offsetY;
++      this.canvas.style.cursor = 'grabbing';
++      e.preventDefault();
+     }
+   }
+ 
+@@ -268,7 +290,7 @@ export class EventManager {
+       this.system.draggingComponent.type === 'component-drag'
+     ) {
+       if (this.system.draggingComponent.handleDrag) {
+-        this.system.draggingComponent.handleDrag(worldX, worldY);
++        this.system.draggingComponent.handleDrag(worldX, worldY, e.shiftKey);
+       }
+       e.preventDefault();
+       return;
+@@ -393,6 +415,16 @@ export class EventManager {
+   }
+ 
+   handleMouseUp(e) {
++    if (this.system.isPanning) {
++      const rect = this.canvas.getBoundingClientRect();
++      this.system.offsetX = this.system.startOffsetX + e.clientX - rect.left - this.system.startPanX;
++      this.system.offsetY = this.system.startOffsetY + e.clientY - rect.top - this.system.startPanY;
++      this.system.isPanning = false;
++      this.canvas.style.cursor = this._spacePressed ? 'grab' : 'default';
++      this.system.forceRedraw?.();
++      e.preventDefault();
++      return;
++    }
+     const rect = this.canvas.getBoundingClientRect();
+     const x = e.clientX - rect.left;
+     const y = e.clientY - rect.top;
+@@ -489,14 +521,6 @@ export class EventManager {
+       return;
+     }
+ 
+-    // Завершение панорамирования
+-    if (this.system.isPanning) {
+-      this.system.isPanning = false;
+-      this.canvas.style.cursor = 'default';
+-      e.preventDefault();
+-      return;
+-    }
+-
+     this.canvas.style.cursor = 'default';
+   }
+ 
+@@ -529,6 +553,7 @@ export class EventManager {
+     if (e.shiftKey) {
+       system.offsetX -= e.deltaY;
+     } else {
++      system.offsetX -= e.deltaX;
+       system.offsetY -= e.deltaY;
+     }
+ 
+diff --git a/src/ui/ColorPicker.js b/src/ui/ColorPicker.js
+index 75a265b..8570e72 100644
+--- a/src/ui/ColorPicker.js
++++ b/src/ui/ColorPicker.js
+@@ -161,66 +161,26 @@ export class ColorPicker {
+ // В ColorPicker.js - исправленный selectColor()
+ 
+     selectColor(color, cell) {
+-        // 🚫 Защита от повторных вызовов
+-        if (this._selecting) return;
+-        this._selecting = true;
+-        
+-        // Убираем выделение с предыдущей
+-        if (this.selectedCell) {
+-            this.selectedCell.style.borderColor = 'transparent';
+-        }
+-
+-        // Выделяем новую
+-        this.selectedColor = color;
+-        this.selectedCell = cell;
+-        cell.style.borderColor = '#fff';
+-
+-        // Вызываем callback с задержкой
+-        if (this.options.onSelect) {
+-            setTimeout(() => {
+-                this.options.onSelect(color);
+-                this._selecting = false;
+-            }, 10);
+-        } else {
+-            this._selecting = false;
+-        }
++        this.setSelection(color, cell);
++        this.options.onSelect?.(color);
+     }
+ 
+     resetColor() {
+-        if (this._resetting) return;
+-        this._resetting = true;
+-        
+-        if (this.selectedCell) {
+-            this.selectedCell.style.borderColor = 'transparent';
+-        }
+-        
+-        this.selectedColor = null;
+-        this.selectedCell = null;
+-
+-        if (this.options.onReset) {
+-            setTimeout(() => {
+-                this.options.onReset();
+-                this._resetting = false;
+-            }, 10);
+-        } else {
+-            this._resetting = false;
+-        }
++        this.setSelection(null, null);
++        this.options.onReset?.();
+     }
+ 
+-    setColor(colorHex) {
+-        if (!colorHex) {
+-            this.resetColor();
+-            return;
+-        }
++    setSelection(color, cell) {
++        if (this.selectedCell) this.selectedCell.style.borderColor = 'transparent';
++        this.selectedColor = color;
++        this.selectedCell = cell;
++        if (cell) cell.style.borderColor = '#fff';
++    }
+ 
+-        // Ищем ячейку с таким цветом
+-        const cells = this.element.querySelectorAll('.color-cell');
+-        for (let cell of cells) {
+-            if (cell.dataset.color === colorHex) {
+-                this.selectColor(colorHex, cell);
+-                break;
+-            }
+-        }
++    setColor(color) {
++        const cell = Array.from(this.element?.querySelectorAll('.color-cell') || [])
++            .find(item => item.dataset.color === color);
++        this.setSelection(color ?? null, cell ?? null);
+     }
+ 
+     getColor() {
+diff --git a/src/ui/ContextMenu.js b/src/ui/ContextMenu.js
+index 263402c..b9f67b6 100644
+--- a/src/ui/ContextMenu.js
++++ b/src/ui/ContextMenu.js
+@@ -1,3 +1,4 @@
++import { localize } from '../utils/locale.js';
+ // src/ui/ContextMenu.js
+ import { libraryStore } from '../api/index.js';
+ import { PANEL_GRID_WIDTH } from '../constants.js';
+@@ -50,6 +51,7 @@ export class ContextMenu {
+                     groups[entry.name] = {
+                         source: entry.source,
+                         modules: mods,
++                        meta: entry.meta,
+                         byCategory,
+                     };
+                     for (const m of mods) {
+@@ -233,7 +235,12 @@ export class ContextMenu {
+                 justify-content: space-between;
+                 align-items: center;
+             `;
+-            root.innerHTML = `<span>${icon} ${libName}</span><span style="color:#555;font-size:10px;">${entry.modules.length}</span>`;
++            const label = document.createElement('span');
++            label.textContent = `${icon} ${localize(entry.meta?.displayNameI18n, 'en') || entry.meta?.displayName || libName}`;
++            const count = document.createElement('span');
++            count.style.cssText = 'color:#555;font-size:10px;';
++            count.textContent = String(entry.modules.length);
++            root.append(label, count);
+ 
+             root.addEventListener('mouseenter', () => {
+                 this._setTreeHover(root);
+@@ -667,7 +674,9 @@ export class ContextMenu {
+ 
+     _createModuleRow(moduleEntry, libName) {
+         const { name, description } = moduleEntry;
+-        const displayName = moduleEntry.displayName || description?.displayName || name;
++        const displayName = moduleEntry.displayNameI18n
++            ? localize(moduleEntry.displayNameI18n, 'en')
++            : moduleEntry.displayName || description?.displayName || name;
+         const isUser = this.libraryGroups[libName]?.source === 'user';
+ 
+         const item = document.createElement('div');
+@@ -1238,4 +1247,4 @@ export class ContextMenu {
+             window.open('/editor/editor.html', '_blank');
+         }
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/src/ui/JackContextMenu.js b/src/ui/JackContextMenu.js
+index 7c00231..f49a9e5 100644
+--- a/src/ui/JackContextMenu.js
++++ b/src/ui/JackContextMenu.js
+@@ -1,3 +1,4 @@
++import { positionContextMenu } from './positionContextMenu.js';
+ // src/ui/JackContextMenu.js
+ import { ColorPicker } from './ColorPicker.js';
+ import { injectColorPickerStyles } from './ColorPickerStyles.js';
+@@ -64,10 +65,8 @@ export class JackContextMenu {
+         this.updateMenuContent();
+         
+         // Позиционируем
+-        this.menuElement.style.left = `${x}px`;
+-        this.menuElement.style.top = `${y}px`;
+-        this.menuElement.style.display = 'block';
+-        
++        positionContextMenu(this.menuElement, x, y);
++
+         // Закрываем общее контекстное меню если открыто
+         if (this.system.contextMenu && this.system.contextMenu.hide) {
+             this.system.contextMenu.hide();
+diff --git a/src/ui/Minimap.js b/src/ui/Minimap.js
+index 0daa625..8e7d83d 100644
+--- a/src/ui/Minimap.js
++++ b/src/ui/Minimap.js
+@@ -629,8 +629,8 @@ export class Minimap {
+         const cx = module.gridX + module.gridWidth / 2;
+         const cy = module.gridY + module.gridHeight / 2;
+         
+-        const newOX = s.canvas.width  / 2 - cx * BASE_STEP_X * s.scale;
+-        const newOY = s.canvas.height / 2 - cy * BASE_STEP_Y * s.scale;
++        const newOX = s.canvas.clientWidth / 2 - cx * BASE_STEP_X * s.scale;
++        const newOY = s.canvas.clientHeight / 2 - cy * BASE_STEP_Y * s.scale;
+         
+         if (!Number.isFinite(newOX) || !Number.isFinite(newOY)) {
+             console.warn('[Minimap] _jumpToModule: non-finite offset', newOX, newOY);
+diff --git a/src/ui/ModuleContextMenu.js b/src/ui/ModuleContextMenu.js
+index d12b79d..d8a34c3 100644
+--- a/src/ui/ModuleContextMenu.js
++++ b/src/ui/ModuleContextMenu.js
+@@ -1,7 +1,9 @@
++import { selectPulvisWav, switchPulvisLanguage } from './PulvisPanel.js';
++import './module-menu.css';
++import { positionContextMenu } from './positionContextMenu.js';
+ // src/ui/ModuleContextMenu.js
+ import { ColorPicker } from './ColorPicker.js';
+-import { injectColorPickerStyles } from './ColorPickerStyles.js';
+-import { isValidCategory, normalizeCategory } from '../moduleCategories.js';
++import { localize, getPulvisPreference } from '../utils/locale.js';
+ import { libraryStore } from '../api/index.js';
+ const IS_DEV = import.meta.env.DEV;
+ export class ModuleContextMenu {
+@@ -12,42 +14,25 @@ export class ModuleContextMenu {
+ 
+     this.createMenuElement();
+     this.setupEventListeners();
+-    this.injectStyles();
+     ColorPicker.injectStyles();
+   }
+ 
+   createMenuElement() {
+     this.menuElement = document.createElement('div');
+     this.menuElement.id = 'module-context-menu';
+-    this.menuElement.style.cssText = `
+-            position: fixed;
+-            min-width: 150px;
+-            max-width: 170px;
+-            background: #2a2a2a;
+-            border: 1px solid #444;
+-            border-radius: 6px;
+-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+-            z-index: 15000;
+-            font-family: Arial, sans-serif;
+-            color: #ddd;
+-            display: none;
+-            overflow: hidden;
+-        `;
+-
+     document.body.appendChild(this.menuElement);
+   }
+ 
+   show(module, x, y) {
+-    if (this.system?.locked) {
+-      this.system.showNotification?.('🔒 Patch is locked');
++    if (this.system?.locked && !module.pulvisControls) {
++      this.system.showNotification?.(this.t({"en":"🔒 Patch is locked","zh":"🔒 补丁已锁定","ru":"🔒 Патч заблокирован"}));
+       return;
+     }
++    this.anchor = { x, y };
+     this.currentModule = module;
+     this.updateMenuContent();
+ 
+-    this.menuElement.style.left = `${x}px`;
+-    this.menuElement.style.top = `${y}px`;
+-    this.menuElement.style.display = 'block';
++    positionContextMenu(this.menuElement, x, y);
+ 
+     if (this.system.contextMenu?.hide) this.system.contextMenu.hide();
+     if (this.system.jackContextMenu?.hide) this.system.jackContextMenu.hide();
+@@ -60,6 +45,95 @@ export class ModuleContextMenu {
+     }
+   }
+ 
++  t(text) {
++    return localize(text, this.currentModule?.pulvisControls ? this.currentModule.uiLanguage : undefined);
++  }
++
++  showPulvisAbout(definition) {
++    const url = 'https://github.com/NJyutong/csmodular-pulvis';
++    const dialog = document.createElement('dialog');
++    dialog.className = 'pulvis-about-dialog';
++    dialog.lang = definition.uiLanguage;
++    dialog.setAttribute('aria-labelledby', 'pulvis-about-title');
++
++    const icon = document.createElement('img');
++    icon.src = import.meta.env.BASE_URL + 'libraries/pulvis/assets/pulvis-icon.png';
++    icon.alt = '';
++    icon.width = icon.height = 44;
++    const title = document.createElement('h2');
++    title.id = 'pulvis-about-title';
++    title.textContent = this.t({ en: 'About Pulvis', zh: '关于 Pulvis', ru: 'О Pulvis' });
++    const moduleName = document.createElement('p');
++    moduleName.textContent = definition.displayName + ' · v' + definition.pulvisVersion;
++    const links = document.createElement('dl');
++    const addLink = (label, text, href) => {
++      const term = document.createElement('dt');
++      term.textContent = this.t(label);
++      const value = document.createElement('dd');
++      const link = document.createElement('a');
++      link.href = href;
++      link.target = '_blank';
++      link.rel = 'noopener noreferrer';
++      link.textContent = text;
++      value.append(link);
++      links.append(term, value);
++    };
++    addLink({ en: 'Project website', zh: '项目网址', ru: 'Сайт проекта' }, url, url);
++    addLink({ en: 'License', zh: '许可证', ru: 'Лицензия' }, 'MIT', url + '/blob/HEAD/LICENSE');
++    const copyright = document.createElement('small');
++    copyright.textContent = '© 2026 Zhang Shengwei';
++    const close = document.createElement('button');
++    close.type = 'button';
++    close.autofocus = true;
++    close.textContent = this.t({ en: 'Close', zh: '关闭', ru: 'Закрыть' });
++    close.onclick = () => dialog.close();
++    dialog.onclick = event => {
++      const rect = dialog.getBoundingClientRect();
++      if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right
++          || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
++    };
++    dialog.onkeydown = event => event.stopPropagation();
++    dialog.onclose = () => {
++      dialog.remove();
++      this.system.canvas.focus({ preventScroll: true });
++    };
++    dialog.append(icon, title, moduleName, links, copyright, close);
++    document.body.append(dialog);
++    dialog.showModal();
++  }
++
++  addPulvisSettings() {
++    const definition = this.system.moduleFactory.moduleRegistry[this.currentModule.jsonName];
++    const about = this.createMenuItem(this.t({ en: 'About', zh: '关于', ru: 'О модуле' }),
++        () => this.showPulvisAbout(definition));
++    about.setAttribute('aria-haspopup', 'dialog');
++    const label = document.createElement('label');
++    label.className = 'pulvis-language';
++    label.append(this.t({ en: 'Language', zh: '语言', ru: 'Язык' }));
++    const select = document.createElement('select');
++    for (const [value, name] of [
++      ['auto', this.t({ en: 'System default', zh: '跟随系统', ru: 'Как в системе' })],
++      ['zh', '简体中文'], ['ru', 'Русский'], ['en', 'English'],
++    ]) select.add(new Option(name, value));
++    select.value = getPulvisPreference();
++    select.onchange = () => {
++      switchPulvisLanguage(this.system, select.value);
++      this.updateMenuContent();
++      positionContextMenu(this.menuElement, this.anchor.x, this.anchor.y);
++      this.menuElement.querySelector('.pulvis-language select').focus();
++    };
++    label.append(select);
++    const panel = this.currentModule;
++    const viewLabel = panel.pulvisFft
++        ? { en: 'Show source', zh: '显示音源', ru: 'Показать источник' }
++        : { en: 'Show left-channel spectrum', zh: '显示左声道频谱', ru: 'Показать спектр левого канала' };
++    const view = this.createMenuItem(this.t(viewLabel), () => {
++      panel.pulvisFft = !panel.pulvisFft;
++      panel.setDirty(true);
++    });
++    this.menuElement.append(about, label, view);
++  }
++
+   updateMenuContent() {
+     if (!this.currentModule) return;
+ 
+@@ -68,103 +142,55 @@ export class ModuleContextMenu {
+     // === ЗАГОЛОВОК ===
+     this.menuElement.appendChild(this.createHeader());
+ 
+-    // === LAYER SWITCHER ===
+-    const layerSection = document.createElement('div');
+-    layerSection.style.cssText = `
+-            padding: 6px 8px;
+-            border-bottom: 1px solid #333;
+-        `;
+-
+-    const layerTitle = document.createElement('div');
+-    layerTitle.style.cssText = `
+-            color: #aaa;
+-            font-size: 10px;
+-            margin-bottom: 4px;
+-        `;
+-    layerTitle.textContent = 'Layer:';
+-    layerSection.appendChild(layerTitle);
+-
+-    const layerButtons = document.createElement('div');
+-    layerButtons.style.cssText = `
+-            display: flex;
+-            gap: 6px;
+-        `;
+-
+-    const currentLayer = this.currentModule.layer || 'voice';
+-
+-    // Voice button
+-    const voiceBtn = document.createElement('button');
+-    voiceBtn.textContent = 'Voice';
+-    const isVoice = currentLayer === 'voice';
+-    voiceBtn.style.cssText = `
+-            flex: 1;
+-            padding: 5px 6px;
+-            background: ${isVoice ? '#0a3a5a' : '#2a2a2a'};
+-            border: 1px solid ${isVoice ? '#0af' : '#444'};
+-            color: ${isVoice ? '#0af' : '#aaa'};
+-            border-radius: 4px;
+-            cursor: pointer;
+-            font-size: 10px;
+-            letter-spacing: 0.2px;
+-            font-family: inherit;
+-            transition: all 0.15s;
+-        `;
+-    if (!isVoice) {
+-        voiceBtn.onmouseenter = () => {
+-            voiceBtn.style.background = '#3a3a3a';
+-            voiceBtn.style.borderColor = '#666';
+-        };
+-        voiceBtn.onmouseleave = () => {
+-            voiceBtn.style.background = '#2a2a2a';
+-            voiceBtn.style.borderColor = '#444';
+-        };
+-        voiceBtn.onclick = (e) => {
+-            e.stopPropagation();
+-            this.setLayer('voice');
+-        };
++    if (this.currentModule.pulvisControls) {
++      this.addPulvisSettings();
++      if (this.system.locked) return;
+     }
+ 
+-    // FX button
+-    const fxBtn = document.createElement('button');
+-    fxBtn.textContent = 'FX';
+-    const isFx = currentLayer === 'fx';
+-    fxBtn.style.cssText = `
+-            flex: 1;
+-            padding: 5px 6px;
+-            background: ${isFx ? '#3a2a0a' : '#2a2a2a'};
+-            border: 1px solid ${isFx ? '#f59e0b' : '#444'};
+-            color: ${isFx ? '#f59e0b' : '#aaa'};
+-            border-radius: 4px;
+-            cursor: pointer;
+-            font-size: 10px;
+-            letter-spacing: 0.2px;
+-            font-family: inherit;
+-            transition: all 0.15s;
+-        `;
+-    if (!isFx) {
+-        fxBtn.onmouseenter = () => {
+-            fxBtn.style.background = '#3a3a3a';
+-            fxBtn.style.borderColor = '#666';
+-        };
+-        fxBtn.onmouseleave = () => {
+-            fxBtn.style.background = '#2a2a2a';
+-            fxBtn.style.borderColor = '#444';
+-        };
+-        fxBtn.onclick = (e) => {
+-            e.stopPropagation();
+-            this.setLayer('fx');
+-        };
++    if (this.currentModule.jsonName === 'GrainSample' && ['pulvis', 'granular'].includes(this.currentModule.library)) {
++      const slotControl = this.currentModule.components.find(c => String(c.id) === '14');
++      const slot = Math.max(1, Math.min(8, Math.round(slotControl?.value ?? 1)));
++      const sample = this.system.csoundEngine.grainSamples.slots.get(slot);
++      const info = document.createElement('div');
++      info.className = 'sample-info';
++      const labels = {
++        en: `Slot ${slot}: ${sample?.name || 'empty'} · kept for this session · stereo WAV uses its left channel`,
++        zh: `采样槽 ${slot}：${sample?.name || '空'} · 仅保留在本次会话 · 立体声 WAV 使用左声道`,
++        ru: `Слот ${slot}: ${sample?.name || 'пусто'} · только на время сеанса · у стерео WAV используется левый канал`,
++      };
++      info.textContent = this.t(labels);
++      this.menuElement.appendChild(info);
++      const loadLabels = {
++        en: `Load WAV → slot ${slot}…`,
++        zh: `导入 WAV → 采样槽 ${slot}…`,
++        ru: `Загрузить WAV → слот ${slot}…`,
++      };
++      this.menuElement.appendChild(this.createMenuItem(this.t(loadLabels), () => {
++        this.hide();
++        selectPulvisWav(this.system, slot);
++      }));
+     }
+ 
+-    layerButtons.appendChild(voiceBtn);
+-    layerButtons.appendChild(fxBtn);
+-    layerSection.appendChild(layerButtons);
+-    this.menuElement.appendChild(layerSection);
++    // === LAYER SWITCHER ===
++    const layerSection = document.createElement('div');
++    layerSection.className = 'module-layers';
++    const layerTitle = document.createElement('span');
++    layerTitle.textContent = this.t({en:'Layer', zh:'图层', ru:'Слой'});
++    layerSection.append(layerTitle);
++    const current = this.currentModule.layer || 'voice';
++    for (const [layer, label] of [['voice', this.t({en:'Voice', zh:'声部', ru:'Голос'})], ['fx', 'FX']]) {
++      const button = document.createElement('button');
++      button.textContent = label;
++      button.setAttribute('aria-pressed', String(current === layer));
++      button.onclick = () => this.setLayer(layer);
++      layerSection.append(button);
++    }
++    this.menuElement.append(layerSection);
+ 
+     // === OPEN IN EDITOR ===
+     this.menuElement.appendChild(
+       this.createMenuItem(
+-        'Open in Editor',
++        this.t({ en: 'Open in Editor', zh: '在编辑器中打开', ru: 'Открыть в редакторе' }),
+         () => this.openModuleInEditor(),
+       ),
+     );
+@@ -184,7 +210,7 @@ export class ModuleContextMenu {
+                 color: #aaa;
+                 font-size: 10px;
+             `;
+-        colorTitle.textContent = 'Panel color:';
++        colorTitle.textContent = this.t({"en":"Panel color:","zh":"面板颜色：","ru":"Цвет панели:"});
+         colorSection.appendChild(colorTitle);
+ 
+         if (!this.colorPicker) {
+@@ -193,7 +219,7 @@ export class ModuleContextMenu {
+                 rows: 4,
+                 cellSize: 14,
+                 showReset: true,
+-                resetText: '↺ Default Gray',
++                resetText: this.t({"en":"↺ Follow theme","zh":"↺ 跟随系统主题","ru":"↺ Цвет темы"}),
+                 onSelect: (color) => this.changePanelColor(color),
+                 onReset: () => this.resetPanelColor(),
+             });
+@@ -203,20 +229,22 @@ export class ModuleContextMenu {
+         } else {
+             colorSection.appendChild(this.colorPicker.element);
+ 
+-            const currentColor = this.currentModule.customColor || '#606060';
+-            this.colorPicker.setColor(currentColor);
++
+         }
+ 
++        this.colorPicker.element.querySelector('.color-reset').textContent =
++            this.t({en:'↺ Follow theme', zh:'↺ 跟随系统主题', ru:'↺ Цвет темы'});
++        this.colorPicker.setColor(this.currentModule.customColor);
+         this.menuElement.appendChild(colorSection);
+     }
+ 
+     // === DELETE ===
+-    this.menuElement.appendChild(this.createSeparator());
++
+     this.menuElement.appendChild(
+       this.createMenuItem(
+-        '🗑️ Delete Module',
++        this.t({"en":"Delete module","zh":"删除模块","ru":"Удалить модуль"}),
+         () => this.deleteModule(),
+-        '#ff6b6b',
++        'destructive',
+       ),
+     );
+   }
+@@ -227,31 +255,13 @@ export class ModuleContextMenu {
+ 
+   createHeader() {
+     const header = document.createElement('div');
+-    header.style.cssText = `
+-            padding: 6px 8px;
+-            background: #333;
+-            color: #0af;
+-            font-size: 11px;
+-            border-bottom: 1px solid #444;
+-            font-weight: bold;
+-            display: flex;
+-            justify-content: space-between;
+-            align-items: center;
+-        `;
+-
+-    // Название модуля (слева, синим)
++    header.className = 'module-menu-title';
+     const title = document.createElement('span');
+-    title.textContent = this.currentModule?.title || 'Module';
++    title.textContent = this.currentModule?.title || this.t({"en":"Module","zh":"模块","ru":"Модуль"});
+ 
+     // ⭐ Категория (справа, серым) — вместо дублирующего jsonName
+     const category = document.createElement('span');
+-    category.style.cssText = `
+-            font-size: 10px;
+-            color: #888;
+-            font-weight: normal;
+-            margin-left: 6px;
+-            white-space: nowrap;
+-        `;
++    category.className = 'module-category';
+     category.textContent = this._getModuleCategoryLabel();
+ 
+     header.appendChild(title);
+@@ -261,42 +271,30 @@ export class ModuleContextMenu {
+   }
+ 
+   _getModuleCategoryLabel() {
+-    const m = this.currentModule;
+-    if (!m) return '';
+-
+-    // library-система: category обязательна и должна быть из CATEGORIES
+-    if (isValidCategory(m.category)) {
+-      return m.category.charAt(0).toUpperCase() + m.category.slice(1);
+-    }
+-
+-    // category есть, но невалидна → normalizeCategory даст 'custom' + warn
+-    if (m.category !== undefined && m.category !== null) {
+-      const { category } = normalizeCategory(m, `ModuleContextMenu/${m.jsonName || m.title || '?'}`);
+-      return category.charAt(0).toUpperCase() + category.slice(1);
+-    }
+-
+-    // category нет вообще (старый модуль до library-системы) → Custom
+-    return 'Custom';
++      const m = this.currentModule;
++      if (!m) return '';
++
++      const category = m.category || this.system.moduleFactory?.moduleRegistry[m.jsonName]?.category;
++      if (category) {
++          const labels = {
++              fx: { en: 'FX', zh: '效果', ru: 'Эффекты' },
++              sample: { en: 'Sample', zh: '采样', ru: 'Сэмплы' },
++              osc: { en: 'Oscillator', zh: '振荡器', ru: 'Осциллятор' },
++          };
++          return labels[category] ? this.t(labels[category]) : category.charAt(0).toUpperCase() + category.slice(1);
++      }
++      if (m.isUser) return this.t({"en":"User","zh":"用户","ru":"Пользователь"});
++      return this.t({"en":"Unknown","zh":"未知","ru":"Неизвестно"});
+   }
+ 
+   // ============================================================
+   //  ПУНКТЫ МЕНЮ
+   // ============================================================
+ 
+-  createMenuItem(text, onClick) {
+-    const item = document.createElement('div');
+-    item.style.cssText = `
+-            padding: 6px 8px;
+-            cursor: pointer;
+-            font-size: 11px;
+-            display: flex;
+-            align-items: center;
+-            gap: 6px;
+-        `;
+-    item.innerHTML = text;
+-
+-    item.onmouseenter = () => (item.style.background = '#3a3a3a');
+-    item.onmouseleave = () => (item.style.background = 'transparent');
++  createMenuItem(text, onClick, variant = '') {
++    const item = document.createElement('button');
++    item.className = 'module-action ' + variant;
++    item.textContent = text;
+     item.onclick = (e) => {
+       e.stopPropagation();
+       onClick();
+@@ -435,7 +433,7 @@ export class ModuleContextMenu {
+ 
+   setLayer(newLayer) {
+     if (this.system?.locked) {
+-      this.system.showNotification?.('🔒 Patch is locked');
++      this.system.showNotification?.(this.t({en:'🔒 Patch is locked', zh:'🔒 补丁已锁定', ru:'🔒 Патч заблокирован'}));
+       return;
+     }
+     if (!this.currentModule) return;
+@@ -445,12 +443,12 @@ export class ModuleContextMenu {
+ 
+     const cables = this.system.patchManager.findCablesByModule(this.currentModule.moduleId);
+     if (cables.length > 0) {
+-      const layerNames = { voice: 'Voice', fx: 'FX' };
+-      const ok = confirm(
+-        `У модуля "${this.currentModule.title}" есть ${cables.length} кабел${cables.length === 1 ? 'ь' : cables.length < 5 ? 'я' : 'ей'}.\n\n` +
+-        `При смене слоя на ${layerNames[newLayer]} все кабели будут удалены.\n\n` +
+-        `Продолжить?`
+-      );
++      const layerNames = { voice: this.t({"en":"Voice","zh":"声部","ru":"Голос"}), fx: 'FX' };
++      const ok = confirm(this.t({
++        en: `Module "${this.currentModule.title}" has ${cables.length} cable(s). Switching to ${layerNames[newLayer]} will remove them. Continue?`,
++        zh: `模块“${this.currentModule.title}”有 ${cables.length} 条连线。切换到 ${layerNames[newLayer]} 层将删除这些连线。继续吗？`,
++        ru: `У модуля «${this.currentModule.title}» кабелей: ${cables.length}. При смене слоя на ${layerNames[newLayer]} они будут удалены. Продолжить?`,
++      }));
+       if (!ok) return;
+ 
+       cables.forEach(cable => {
+@@ -532,6 +530,7 @@ export class ModuleContextMenu {
+     this._changingColor = true;
+ 
+     this.currentModule.customColor = colorHex;
++    this.currentModule.setDirty?.(true);
+ 
+     if (this.currentModule.layer === 'voice') {
+         this.system._voiceDirty = true;
+@@ -539,7 +538,7 @@ export class ModuleContextMenu {
+         this.system._fxDirty = true;
+     }
+     this.system.forceRedraw?.();
+-    this.system.showNotification(`🎨 Panel color changed`);
++    this.system.showNotification(this.t({en:'🎨 Panel color changed',zh:'🎨 面板颜色已更改',ru:'🎨 Цвет панели изменён'}));
+ 
+     setTimeout(() => {
+       this._changingColor = false;
+@@ -554,12 +553,10 @@ export class ModuleContextMenu {
+ 
+     this.currentModule.customColor = null;
+ 
+-    if (this.system) {
+-      this.system.needsRedraw = true;
+-      requestAnimationFrame(() => this.system.animate());
+-    }
++    this.currentModule.setDirty?.(true);
++    this.system.forceRedraw?.();
+ 
+-    this.system.showNotification(`↺ Panel color reset to default`);
++    this.system.showNotification(this.t({en:'↺ Panel color reset to default',zh:'↺ 面板颜色已重置',ru:'↺ Восстановлен цвет панели по умолчанию'}));
+ 
+     setTimeout(() => {
+       this._changingColor = false;
+@@ -572,7 +569,7 @@ export class ModuleContextMenu {
+ 
+   deleteModule() {
+       if (this.system?.locked) {
+-          this.system.showNotification?.('🔒 Patch is locked');
++          this.system.showNotification?.(this.t({"en":"🔒 Patch is locked","zh":"🔒 补丁已锁定","ru":"🔒 Патч заблокирован"}));
+           return;
+       }
+       if (!this.currentModule) return;
+@@ -602,20 +599,4 @@ export class ModuleContextMenu {
+     });
+   }
+ 
+-  injectStyles() {
+-    if (document.getElementById('module-menu-styles')) return;
+-
+-    const style = document.createElement('style');
+-    style.id = 'module-menu-styles';
+-    style.textContent = `
+-            #module-context-menu div[style*="cursor: pointer"]:hover {
+-                background: #3a3a3a !important;
+-            }
+-
+-            #module-context-menu div[style*="cursor: pointer"]:active {
+-                background: #4a4a4a !important;
+-            }
+-        `;
+-    document.head.appendChild(style);
+-  }
+-}
+\ No newline at end of file
++}
+diff --git a/src/ui/PulvisPanel.js b/src/ui/PulvisPanel.js
+new file mode 100644
+index 0000000..8d6c816
+--- /dev/null
++++ b/src/ui/PulvisPanel.js
+@@ -0,0 +1,1083 @@
++import { getCurrentTheme } from '../theme/currentTheme.js';
++import { getUiLanguage, localize, localizePulvis, getPulvisLanguage, localizeDefinition, setPulvisPreference } from '../utils/locale.js';
++
++const UI_FONT = '"Microsoft YaHei UI", "PingFang SC", "Segoe UI", system-ui, Arial, sans-serif';
++const MONO_FONT = '"JetBrains Mono", "Cascadia Mono", "Consolas", "Segoe UI", monospace';
++const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
++
++function parseHexRgb(color, fallback = [108, 170, 210]) {
++    if (typeof color !== 'string') return fallback;
++    const c = color.trim();
++    const rgbMatch = c.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
++    if (rgbMatch) {
++        return [
++            Math.max(0, Math.min(255, Math.round(Number(rgbMatch[1])))),
++            Math.max(0, Math.min(255, Math.round(Number(rgbMatch[2])))),
++            Math.max(0, Math.min(255, Math.round(Number(rgbMatch[3])))),
++        ];
++    }
++    const hslMatch = c.match(/^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/i);
++    if (hslMatch) {
++        const h = ((Number(hslMatch[1]) % 360) + 360) % 360;
++        const s = Math.max(0, Math.min(1, Number(hslMatch[2]) / 100));
++        const l = Math.max(0, Math.min(1, Number(hslMatch[3]) / 100));
++        const ch = (1 - Math.abs(2 * l - 1)) * s;
++        const x = ch * (1 - Math.abs(((h / 60) % 2) - 1));
++        const m = l - ch / 2;
++        const [r1, g1, b1] = h < 60 ? [ch, x, 0]
++            : h < 120 ? [x, ch, 0]
++            : h < 180 ? [0, ch, x]
++            : h < 240 ? [0, x, ch]
++            : h < 300 ? [x, 0, ch]
++            : [ch, 0, x];
++        return [
++            Math.round((r1 + m) * 255),
++            Math.round((g1 + m) * 255),
++            Math.round((b1 + m) * 255),
++        ];
++    }
++    let h = c.replace(/^#/, '');
++    if (h.length === 3) h = h.split('').map(ch => ch + ch).join('');
++    if (!/^[0-9a-fA-F]{6}$/.test(h)) return fallback;
++    return [
++        parseInt(h.slice(0, 2), 16),
++        parseInt(h.slice(2, 4), 16),
++        parseInt(h.slice(4, 6), 16),
++    ];
++}
++
++function rgbToHex(r, g, b) {
++    return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
++}
++
++function darkenHex(color, factor = 0.72) {
++    const [r, g, b] = parseHexRgb(color);
++    const k = Math.max(0, Math.min(1, 1 - factor));
++    return rgbToHex(r * k, g * k, b * k);
++}
++
++function blendHex(baseColor, tintColor, tintRatio = 0.16) {
++    const [br, bg, bb] = parseHexRgb(baseColor);
++    const [tr, tg, tb] = parseHexRgb(tintColor);
++    const a = Math.max(0, Math.min(1, tintRatio));
++    return rgbToHex(
++        br * (1 - a) + tr * a,
++        bg * (1 - a) + tg * a,
++        bb * (1 - a) + tb * a,
++    );
++}
++
++function hexToRgba(hex, alpha = 1) {
++    const [r, g, b] = parseHexRgb(hex);
++    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
++}
++
++function fillRoundedPath(ctx, x, y, w, h, r = 0) {
++    ctx.beginPath();
++    if (typeof ctx.roundRect === 'function' && (Array.isArray(r) || r > 0)) {
++        ctx.roundRect(x, y, w, h, r);
++    } else {
++        ctx.rect(x, y, w, h);
++    }
++    ctx.fill();
++}
++
++function strokeRoundedPath(ctx, x, y, w, h, r = 0) {
++    ctx.beginPath();
++    if (typeof ctx.roundRect === 'function' && (Array.isArray(r) || r > 0)) {
++        ctx.roundRect(x, y, w, h, r);
++    } else {
++        ctx.rect(x, y, w, h);
++    }
++    ctx.stroke();
++}
++
++function getPulvisPalette(panel) {
++    const custom = panel?.customColor || null;
++    if (panel.pulvisPalette && panel.pulvisPalette.customColor === custom) return panel.pulvisPalette;
++    const modName = panel.jsonName;
++    // Restrained, desaturated hardware silkscreen accents (easy on the eyes for long sessions).
++    const accent = modName === 'GrainFreeze'
++        ? '#a78ec9'
++        : modName === 'GrainSample'
++            ? '#d1a25b'
++            : '#6caad2';
++    const accentDeep = modName === 'GrainFreeze'
++        ? '#654f85'
++        : modName === 'GrainSample'
++            ? '#8a6731'
++            : '#37688a';
++    const accentSoft = modName === 'GrainFreeze'
++        ? '#c2afd9'
++        : modName === 'GrainSample'
++            ? '#dfc08b'
++            : '#94c3e0';
++
++    const chassisTop = custom ? blendHex('#1e2128', custom, 0.36) : '#1e2128';
++    const chassisBottom = custom ? blendHex('#15181e', custom, 0.28) : '#15181e';
++    const headerBg = custom ? blendHex('#13161c', custom, 0.22) : '#13161c';
++    const deckBg = custom ? blendHex('#171a21', custom, 0.18) : '#171a21';
++    const footerBg = custom ? blendHex('#13161c', custom, 0.20) : '#13161c';
++
++    return panel.pulvisPalette = {
++        customColor: custom,
++        accent,
++        accentDeep,
++        accentSoft,
++        chassisTop,
++        chassisBottom,
++        chassisBorder: 'rgba(255, 255, 255, 0.11)',
++        chassisBevel: 'rgba(255, 255, 255, 0.07)',
++        headerBg,
++        oledBg: '#0c0f14',
++        oledGrid: 'rgba(255, 255, 255, 0.045)',
++        oledBorder: 'rgba(255, 255, 255, 0.09)',
++        deckBg,
++        deckHeaderBg: 'rgba(255, 255, 255, 0.028)',
++        deckBorder: 'rgba(255, 255, 255, 0.068)',
++        footerBg,
++        titleText: '#edf0f5',
++        sectionText: '#cfd6e0',
++        labelText: '#c5cdd8',
++        mutedText: '#96a0b0',
++        valueText: '#e1e7ef',
++        sectionAccent: accent,
++        pillBg: '#0e1116',
++        pillBorder: 'rgba(255, 255, 255, 0.09)',
++        pillBorderActive: hexToRgba(accent, 0.65),
++        controlBg: '#202530',
++        controlBgHover: '#2a303e',
++        controlBgActive: accentDeep,
++        controlBorder: 'rgba(255, 255, 255, 0.13)',
++        knobTrack: 'rgba(255, 255, 255, 0.11)',
++        knobCapTop: '#2e3442',
++        knobCapBottom: '#1b1f28',
++        knobArc: accent,
++        knobNeedle: '#f1f5f9',
++        divider: 'rgba(255, 255, 255, 0.05)',
++    };
++}
++
++function pitchToNoteAndHz(semitones) {
++    const midi = Math.round(57 + semitones);
++    const note = NOTE_NAMES[((midi % 12) + 12) % 12];
++    const octave = Math.floor(midi / 12) - 1;
++    const hz = 220 * Math.pow(2, semitones / 12);
++    return { note: `${note}${octave}`, hz: hz >= 1000 ? `${(hz / 1000).toFixed(2)}kHz` : `${hz.toFixed(1)}Hz`, rawHz: hz };
++}
++
++export function formatPulvisKnobValue(knob, panel, detailed = false) {
++    const v = Number(knob?.value) || 0;
++    const key = knob?.csoundName || '';
++    const lang = panel?.uiLanguage || getUiLanguage();
++    const modName = panel?.jsonName || '';
++
++    if (key === 'Wave') {
++        const idx = Math.max(0, Math.min(3, Math.round(v)));
++        const shortNames = lang === 'zh'
++            ? ['正弦', '三角', '锯齿', '方波']
++            : lang === 'ru'
++                ? ['Син', 'Треуг', 'Пила', 'Меандр']
++                : ['Sine', 'Tri', 'Saw', 'Sq'];
++        if (!detailed) return shortNames[idx];
++        const fullNames = lang === 'zh'
++            ? ['0 · 正弦波 (Sine)', '1 · 三角波 (Triangle)', '2 · 锯齿波 (Saw)', '3 · 方波 (Square)']
++            : lang === 'ru'
++                ? ['0 · Синусоида', '1 · Треугольник', '2 · Пила', '3 · Меандр']
++                : ['0 · Sine wave', '1 · Triangle wave', '2 · Sawtooth wave', '3 · Square wave'];
++        return fullNames[idx];
++    }
++    if (key === 'Slot') {
++        const slot = Math.max(1, Math.min(8, Math.round(v)));
++        const entry = panel?.parentSystem?.csoundEngine?.grainSamples?.slots?.get?.(slot);
++        if (!detailed) return `#${slot}${entry ? '●' : '○'}`;
++        if (entry?.name) return `#${slot} · ${entry.name}`;
++        return lang === 'zh' ? `#${slot} · 空槽 (右键导入)` : lang === 'ru' ? `#${slot} · пусто (ПКМ)` : `#${slot} · Empty (Right-click)`;
++    }
++    if (key === 'Pitch') {
++        const rounded = Math.round(v * 10) / 10;
++        const sign = rounded > 0 ? '+' : '';
++        const stText = `${sign}${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}st`;
++        if (!detailed) return `${sign}${Math.round(v)}st`;
++        if (modName === 'GrainOsc') {
++            const { note, hz } = pitchToNoteAndHz(v);
++            return `${stText} · ${hz} (${note})`;
++        }
++        const ratio = Math.pow(2, v / 12).toFixed(2);
++        return `${stText} (${ratio}×)`;
++    }
++    if (key === 'PitchJitter') return `±${Math.round(v)}st`;
++    if (key === 'Density') return `${Math.round(v)}/s`;
++    if (key === 'Size') return `${Math.round(v)}ms`;
++    if (key === 'Position' || key === 'PhaseWarp') {
++        const pct = Math.round((v / 127) * 100);
++        if (!detailed) return `${pct}%`;
++        if (modName === 'GrainFreeze') return `${pct}% (-${((v / 127) * 8).toFixed(2)}s / 8.0s)`;
++        return `${pct}%`;
++    }
++    if (key === 'PosJitter') return `±${Math.round((v / 127) * 100)}%`;
++    if (key === 'Pan') {
++        const p = Math.round(v);
++        if (p === 64) return detailed ? (lang === 'zh' ? 'C (居中)' : lang === 'ru' ? 'C (Центр)' : 'C (Center)') : 'C';
++        if (p < 64) return `L${Math.round(((64 - p) / 64) * 50)}`;
++        return `R${Math.round(((p - 64) / 63) * 50)}`;
++    }
++    if (key === 'Spread' || key === 'Mix') return `${Math.round((v / 127) * 100)}%`;
++    if (key === 'Level') {
++        const db = Math.round(v * 10) / 10;
++        const sign = db > 0 ? '+' : '';
++        return detailed ? `${sign}${db.toFixed(1)} dB` : `${sign}${Math.round(v)}dB`;
++    }
++    if (key === 'Feedback') return `${Math.round(v * 100)}%`;
++    if (key === 'TimeJitter') return `${Math.round(v)}%`;
++    if (key === 'Scan') {
++        const sc = Math.round(v);
++        const sign = sc > 0 ? '+' : '';
++        return `${sign}${sc}%`;
++    }
++    if (key === 'Seed') return `#${Math.round(v)}`;
++    return knob.min >= 0 && knob.max <= 1 ? v.toFixed(2) : String(Math.round(v));
++}
++
++function readPanelVal(panel, id, fallback = 0) {
++    const c = panel.components?.find(item => String(item.id) === String(id));
++    if (!c) return fallback;
++    const v = c.getValue?.() ?? c.value ?? c.currentIndex ?? c.selectedIndex ?? (c.isActive ? 1 : 0);
++    return Number.isFinite(Number(v)) ? Number(v) : fallback;
++}
++
++// Read-only plots. Every signal, marker and window value comes from the module's Csound tables.
++function trace(ctx, points, x, width, yAt, color, lineWidth = 1.3) {
++    ctx.beginPath();
++    for (let i = 0; i < points; i++) {
++        const px = x + i * width / (points - 1);
++        const py = yAt(i);
++        if (i) ctx.lineTo(px, py);
++        else ctx.moveTo(px, py);
++    }
++    ctx.strokeStyle = color;
++    ctx.lineWidth = lineWidth;
++    ctx.stroke();
++}
++
++function drawSpectrum(ctx, bins, rate, x, y, width, height, palette) {
++    const binHz = rate / (2 * (bins.length - 1));
++    const minHz = binHz, maxHz = Math.min(20000, rate / 2);
++    const ratio = maxHz / minHz;
++    const bottom = y + height - 9;
++    ctx.font = `500 8px ${MONO_FONT}`;
++    ctx.textAlign = 'center';
++    ctx.textBaseline = 'bottom';
++    for (const [hz, tick] of [[100,'100'],[1000,'1k'],[10000,'10k']]) {
++        const tx = x + width * Math.log(hz / minHz) / Math.log(ratio);
++        ctx.fillStyle = palette.oledGrid;
++        ctx.fillRect(tx, y, 1, bottom - y);
++        ctx.fillStyle = palette.mutedText;
++        ctx.fillText(tick, tx, y + height + 1);
++    }
++    // Interpolate sparse bass bins, retain the largest measured bin in each treble pixel.
++    trace(ctx, width, x, width, i => {
++        const bin = ratio ** (i / (width - 1));
++        const first = Math.floor(bin);
++        const end = Math.min(bins.length - 1, Math.floor(ratio ** ((i + 1) / (width - 1))));
++        let peak = bins[first] + (bin - first) * (bins[Math.min(first + 1, bins.length - 1)] - bins[first]);
++        for (let j = first + 1; j <= end; j++) peak = Math.max(peak, bins[j]);
++        const db = 20 * Math.log10(Math.max(peak, 0.00001));
++        return bottom - Math.max(0, Math.min(1, (db + 72) / 72)) * (bottom - y);
++    }, palette.accentSoft);
++}
++
++function drawSource(ctx, frame, output, mode, x, y, w, h, palette) {
++    const osc = mode === 'GrainOsc', live = mode === 'GrainFreeze';
++    const mid = y + h / 2;
++    const yAt = value => mid - Math.max(-1, Math.min(1, value)) * (h / 2 - 2);
++    const wrap = value => value - Math.floor(value);
++    const reverse = frame[8] >= 0.5;
++    const phaseAt = t => wrap((reverse ? -2 : 2) * t);
++    const carrier = phase => frame[16 + Math.floor(phase * 192) % 192];
++    if (osc) {
++        trace(ctx, w, x, w, i => yAt(carrier(phaseAt(i / (w - 1)))), palette.accentSoft);
++        if (output?.length >= 4097) {
++            const head = Math.round(output[4096]) % 4096;
++            const period = frame[12] / (220 * 2 ** (frame[10] / 12));
++            const span = Math.min(4095, Math.round(2 * period));
++            trace(ctx, w, x, w, i => yAt(output[(head + 4095 - span + Math.round(i * span / (w - 1))) % 4096]),
++                hexToRgba(palette.accent, 0.8), 1);
++        }
++    } else {
++        const count = live ? 192 : Math.min(192, frame[14]);
++        ctx.fillStyle = hexToRgba(palette.accent, 0.58);
++        for (let i = 0; i < count; i++) {
++            const top = yAt(frame[16 + i]);
++            const bottom = yAt(live ? -frame[16 + i] : frame[465 + i]);
++            ctx.fillRect(x + i * w / 192, top, w / 192 + 0.3, Math.max(1, bottom - top));
++        }
++        const pos = live ? wrap(frame[4] - frame[2] * frame[5]) : frame[2];
++        const radius = frame[3] * (live ? frame[5] : 1);
++        ctx.fillStyle = hexToRgba(palette.accent, 0.13);
++        for (const shift of live ? [-1, 0, 1] : [0]) {
++            const lo = Math.max(0, pos + shift - radius);
++            const hi = Math.min(1, pos + shift + radius);
++            if (hi > lo) ctx.fillRect(x + lo * w, y, (hi - lo) * w, h);
++        }
++        ctx.fillStyle = palette.accentSoft;
++        ctx.fillRect(x + pos * w, y, 1, h);
++        if (live) {
++            ctx.fillStyle = '#f8f8f8';
++            ctx.fillRect(x + frame[4] * w, y, 1.5, h);
++        }
++    }
++    for (let i = 0; i < frame[1]; i++) {
++        const pos = frame[208 + 3 * i];
++        if (pos < 0) continue;
++        const amp = frame[210 + 3 * i];
++        const px = osc ? phaseAt(pos / 2) / 2 : pos;
++        const dotY = osc ? yAt(carrier(pos)) : mid;
++        ctx.fillStyle = palette.accentSoft;
++        ctx.beginPath();
++        ctx.arc(x + px * w, dotY, 1.3 + 1.8 * amp, 0, 2 * Math.PI);
++        ctx.fill();
++    }
++}
++
++function drawPulvisStudioChassisAndOled(panel, ctx, palette) {
++    const px = panel.pixelX;
++    const py = panel.pixelY;
++    const w = panel.width;
++    const h = panel.height;
++    const lang = panel.uiLanguage || getUiLanguage();
++    const modName = panel.jsonName || '';
++
++    const engine = panel.parentSystem.csoundEngine;
++    const tr = (en, zh, ru) => localize({ en, zh, ru }, lang);
++    const running = engine.state === 'running' && !engine.isRecompiling;
++    const data = running && engine.getScopeBuffer(panel.moduleId + ':display');
++    const frame = data?.[0] === 1 ? data : null;
++    const winIdx = frame ? frame[7] : Math.round(readPanelVal(panel, 7));
++
++    ctx.save();
++
++    // 1. Matte Anodized Graphite Chassis (strictly rounded — no square corners poking out).
++    const theme = getCurrentTheme();
++    const baseSurface = panel.customColor || (theme.isLcd && theme.getSurfaceColor()) || '#15181e';
++    ctx.fillStyle = darkenHex(baseSurface, 0.72);
++    fillRoundedPath(ctx, px, py, w, h, 8);
++
++    const grad = ctx.createLinearGradient(px, py, px, py + h);
++    grad.addColorStop(0, hexToRgba(palette.chassisTop, 0.94));
++    grad.addColorStop(1, hexToRgba(palette.chassisBottom, 0.98));
++    ctx.fillStyle = grad;
++    fillRoundedPath(ctx, px, py, w, h, 8);
++
++    // 2. Clean Hardware Header Bar (y = 0..27) — no top-right pill badge, no harsh neon bar.
++    ctx.fillStyle = palette.headerBg;
++    fillRoundedPath(ctx, px + 1, py + 1, w - 2, 26, [7, 7, 0, 0]);
++
++    ctx.strokeStyle = palette.chassisBevel;
++    ctx.lineWidth = 1;
++    ctx.beginPath();
++    ctx.moveTo(px + 9, py + 1.5);
++    ctx.lineTo(px + w - 9, py + 1.5);
++    ctx.stroke();
++
++    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
++    ctx.beginPath();
++    ctx.moveTo(px + 1, py + 27.5);
++    ctx.lineTo(px + w - 1, py + 27.5);
++    ctx.stroke();
++
++    // Subtle machined LED indicator dot + crisp title.
++    ctx.beginPath();
++    ctx.arc(px + 15, py + 14.5, 5.2, 0, Math.PI * 2);
++    ctx.fillStyle = hexToRgba(palette.accent, 0.16);
++    ctx.fill();
++    ctx.beginPath();
++    ctx.arc(px + 15, py + 14.5, 2.8, 0, Math.PI * 2);
++    ctx.fillStyle = palette.accent;
++    ctx.fill();
++
++    ctx.fillStyle = palette.titleText;
++    ctx.font = `600 12px ${UI_FONT}`;
++    ctx.textAlign = 'left';
++    ctx.textBaseline = 'middle';
++    ctx.fillText(panel.title, px + 26, py + 15, w - 40);
++
++    const fft = Boolean(panel.pulvisFft);
++
++    // 3. Recessed Full-Width OLED Display (x = 10..490, y = 32..90)
++    const ox = px + 10;
++    const oy = py + 32;
++    const ow = w - 20;
++    const oh = 58;
++
++    ctx.fillStyle = palette.oledBg;
++    fillRoundedPath(ctx, ox, oy, ow, oh, 6);
++
++    // Subtle top inner glass shadow.
++    const oledShade = ctx.createLinearGradient(ox, oy, ox, oy + 12);
++    oledShade.addColorStop(0, 'rgba(0, 0, 0, 0.42)');
++    oledShade.addColorStop(1, 'rgba(0, 0, 0, 0)');
++    ctx.fillStyle = oledShade;
++    fillRoundedPath(ctx, ox + 1, oy + 1, ow - 2, 12, [5, 5, 0, 0]);
++
++    ctx.strokeStyle = palette.oledBorder;
++    ctx.lineWidth = 1;
++    strokeRoundedPath(ctx, ox + 0.5, oy + 0.5, ow - 1, oh - 1, 6);
++
++    const envX = ox + ow - 134;
++    ctx.strokeStyle = palette.oledGrid;
++    ctx.lineWidth = 1;
++    ctx.beginPath();
++    for (let gx = ox + 36; gx < envX - 8; gx += 36) {
++        ctx.moveTo(gx + 0.5, oy + 5);
++        ctx.lineTo(gx + 0.5, oy + oh - 5);
++    }
++    ctx.moveTo(ox + 8, Math.round(oy + 20 + (oh - 26) / 2) + 0.5);
++    ctx.lineTo(envX - 10, Math.round(oy + 20 + (oh - 26) / 2) + 0.5);
++    ctx.stroke();
++
++    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
++    ctx.beginPath();
++    ctx.moveTo(envX - 6.5, oy + 7);
++    ctx.lineTo(envX - 6.5, oy + oh - 7);
++    ctx.stroke();
++
++    const scopeX = ox + 10;
++    const scopeY = oy + 20;
++    const scopeW = envX - scopeX - 14;
++    const scopeH = oh - 26;
++
++    const activeSlot = Math.max(1, Math.min(8, Math.round(readPanelVal(panel, 14, 1))));
++    const slotsMap = engine.grainSamples.slots;
++    const activeEntry = slotsMap.get(activeSlot);
++    const isSample = modName === 'GrainSample';
++    if (isSample) {
++        const slotW = 19;
++        const slotGap = 2;
++        for (let s = 1; s <= 8; s++) {
++            const sx = scopeX + (s - 1) * (slotW + slotGap);
++            const sy = oy + 4;
++            const isSel = s === activeSlot;
++            const isLoaded = Boolean(slotsMap?.get?.(s));
++            ctx.fillStyle = isSel ? hexToRgba(palette.accent, 0.24) : isLoaded ? '#172220' : '#161a22';
++            fillRoundedPath(ctx, sx, sy, slotW, 13, 2.5);
++            ctx.strokeStyle = isSel ? palette.accent : isLoaded ? '#49997b' : 'rgba(255, 255, 255, 0.09)';
++            ctx.lineWidth = isSel ? 1.2 : 0.9;
++            strokeRoundedPath(ctx, sx + 0.5, sy + 0.5, slotW - 1, 12, 2.5);
++
++            ctx.fillStyle = isSel ? '#f4f7fa' : isLoaded ? '#86cfa8' : '#8590a2';
++            ctx.font = `600 9px ${MONO_FONT}`;
++            ctx.textAlign = 'center';
++            ctx.textBaseline = 'middle';
++            ctx.fillText(`#${s}`, sx + slotW / 2, sy + 6.8);
++        }
++
++        ctx.font = `500 9.5px ${UI_FONT}`;
++        ctx.textAlign = 'right';
++        ctx.textBaseline = 'middle';
++        ctx.fillStyle = activeEntry ? palette.valueText : palette.mutedText;
++        const sampleInfo = frame && frame[659] === activeSlot && activeEntry
++            ? `${activeEntry.name} · ${frame[657].toFixed(2)}s · ${(frame[658] / 1000).toFixed(1)}k`
++            : activeEntry?.name || tr('Empty', '空槽', 'Пусто');
++        ctx.fillText(sampleInfo, scopeX + scopeW, oy + 11, scopeW - 172);
++    } else {
++        const isOsc = modName === 'GrainOsc';
++        const source = isOsc
++            ? formatPulvisKnobValue(frame ? {csoundName:'Wave', value:frame[659]} : panel.pulvisControls.get('Wave'), panel)
++            : frame ? (frame[11] ? tr('Snapshot', '快照', 'Снимок') : tr('Live', '实时', 'Вход'))
++                : panel.pulvisControls.get('Source').currentItem;
++        ctx.font = `600 10px ${UI_FONT}`;
++        ctx.fillStyle = palette.accentSoft;
++        ctx.textAlign = 'left';
++        ctx.textBaseline = 'middle';
++        const pitch = frame && pitchToNoteAndHz(frame[10]);
++        const detail = isOsc && frame ? ` · ${pitch.note} ${pitch.hz} · ${frame[659] ? [24,12,6,3,1][frame[660]] : 1}H` : '';
++        ctx.fillText(source + detail, scopeX, oy + 11, scopeW * 0.56);
++        if (frame) {
++            const state = frame[9] >= 0.5 ? tr('Hold', '锁定', 'Удерж.')
++                : isOsc ? tr('Warp', '扭曲', 'Изгиб') : tr('Record', '录入', 'Запись');
++            ctx.textAlign = 'right';
++            ctx.fillText(`${state} · ${Math.round(frame[2] * 100)}% ${frame[8] ? '◀' : '▶'}`,
++                scopeX + scopeW, oy + 11, scopeW * 0.44);
++        }
++    }
++
++    if (isSample && !activeEntry && !fft) {
++        const btnW = 160;
++        const btnX = scopeX + Math.round((scopeW - btnW) / 2);
++        const label = tr('Open WAV…', '导入 WAV…', 'Открыть WAV…');
++        ctx.fillStyle = '#1b2029';
++        fillRoundedPath(ctx, btnX, scopeY + 6, btnW, 20, 4);
++        ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
++        ctx.lineWidth = 1;
++        strokeRoundedPath(ctx, btnX + 0.5, scopeY + 6.5, btnW - 1, 19, 4);
++        ctx.fillStyle = palette.accentSoft;
++        ctx.font = `600 9.5px ${UI_FONT}`;
++        ctx.textAlign = 'center';
++        ctx.textBaseline = 'middle';
++        ctx.fillText(label, btnX + btnW / 2, scopeY + 16.5, btnW - 12);
++    } else {
++        const bins = frame && fft && engine.getScopeBuffer(panel.moduleId + ':spectrum');
++        if (fft && bins?.length > 1) {
++            drawSpectrum(ctx, bins, frame[12], scopeX, scopeY, scopeW, scopeH, palette);
++        } else if (!fft && frame?.[6] && (!isSample || frame[659] === activeSlot)) {
++            drawSource(ctx, frame, engine.getScopeBuffer(panel.moduleId), modName, scopeX, scopeY, scopeW, scopeH, palette);
++        } else {
++            const status = !running ? (engine.state === 'error' ? tr('Csound error', 'Csound 错误', 'Ошибка Csound')
++                : tr('Csound stopped', 'Csound 已停止', 'Csound остановлен'))
++                : frame && !frame[6] ? tr('No snapshot captured', '尚未捕捉快照', 'Нет снимка')
++                : tr('Waiting for Csound', '等待读取 Csound', 'Ожидание Csound');
++            ctx.fillStyle = palette.mutedText;
++            ctx.font = `500 10px ${UI_FONT}`;
++            ctx.textAlign = 'center';
++            ctx.textBaseline = 'middle';
++            ctx.fillText(status, scopeX + scopeW / 2, scopeY + scopeH / 2);
++        }
++    }
++
++    // Grain Window Envelope Preview (right pane of OLED)
++    const winNames = lang === 'zh'
++        ? ['汉宁窗', '三角窗', '布莱克曼']
++        : lang === 'ru'
++            ? ['Ханн', 'Треуг.', 'Блэкман']
++            : ['Hann', 'Triangle', 'Blackman'];
++    const ew = 122;
++    const eh = 27;
++    const ex = envX + 2;
++    const ey = oy + 20;
++
++    ctx.fillStyle = palette.mutedText;
++    ctx.font = `600 9px ${UI_FONT}`;
++    ctx.textAlign = 'left';
++    ctx.textBaseline = 'middle';
++    ctx.fillText(winNames[winIdx], ex, oy + 11, 56);
++
++    ctx.fillStyle = palette.accentSoft;
++    ctx.font = `600 9px ${MONO_FONT}`;
++    ctx.textAlign = 'right';
++    if (frame) {
++        ctx.fillText(`${frame[1]} · ${Math.round(frame[15] * 100)}%`, ex + ew, oy + 11, 64);
++        trace(ctx, 65, ex, ew, i => ey + eh - frame[400 + i] * (eh - 3), palette.accent);
++        ctx.fillStyle = palette.accentSoft;
++        for (let i = 0; i < frame[1]; i++) {
++            const progress = frame[209 + i * 3], amplitude = frame[210 + i * 3];
++            ctx.beginPath();
++            ctx.arc(ex + progress * ew, ey + eh - amplitude * (eh - 3), 2, 0, 2 * Math.PI);
++            ctx.fill();
++        }
++    }
++
++    // 4. Two Side-by-Side Matte Hardware Control Decks (Left: x=10..246, Right: x=254..490, y=96..262)
++    [px + 10, px + 254].forEach((deckX, deckIdx) => {
++        const deckY = py + 96;
++        const deckW = 236;
++        const deckH = 166;
++
++        ctx.fillStyle = palette.deckBg;
++        fillRoundedPath(ctx, deckX, deckY, deckW, deckH, 6);
++
++        ctx.fillStyle = palette.deckHeaderBg;
++        fillRoundedPath(ctx, deckX + 1, deckY + 1, deckW - 2, 19, [5, 5, 0, 0]);
++        ctx.fillStyle = hexToRgba(palette.accent, 0.78);
++        fillRoundedPath(ctx, deckX + 6, deckY + 5, 2.5, 11, 1.2);
++
++        ctx.strokeStyle = palette.deckBorder;
++        ctx.lineWidth = 1;
++        strokeRoundedPath(ctx, deckX + 0.5, deckY + 0.5, deckW - 1, deckH - 1, 6);
++
++        ctx.strokeStyle = palette.divider;
++        ctx.beginPath();
++        ctx.moveTo(deckX + 8, py + 115.5);
++        ctx.lineTo(deckX + deckW - 8, py + 115.5);
++        if (modName === 'GrainOsc' && deckIdx === 1) {
++            // GrainOsc right deck has 2 spacious 3-column rows centered vertically.
++            ctx.moveTo(deckX + 8, py + 188.5);
++            ctx.lineTo(deckX + deckW - 8, py + 188.5);
++        } else {
++            ctx.moveTo(deckX + 8, py + 163.5);
++            ctx.lineTo(deckX + deckW - 8, py + 163.5);
++            ctx.moveTo(deckX + 8, py + 211.5);
++            ctx.lineTo(deckX + deckW - 8, py + 211.5);
++        }
++        ctx.stroke();
++    });
++
++    // 5. Quiet Recessed Audio Bus Footer Bar (x = 10..490, y = 266..294)
++    ctx.fillStyle = palette.footerBg;
++    fillRoundedPath(ctx, px + 10, py + 266, w - 20, 28, 5);
++    ctx.strokeStyle = palette.deckBorder;
++    ctx.lineWidth = 1;
++    strokeRoundedPath(ctx, px + 10.5, py + 266.5, w - 21, 27, 5);
++
++    // Subtle machined outer perimeter frame
++    ctx.strokeStyle = palette.chassisBorder;
++    ctx.lineWidth = 1;
++    strokeRoundedPath(ctx, px + 0.5, py + 0.5, w - 1, h - 1, 8);
++
++    ctx.restore();
++}
++
++function drawTextLabel(ctx) {
++    const panel = this.parent;
++    const palette = getPulvisPalette(panel);
++
++    const idNum = Number(this.id);
++
++    ctx.save();
++    if (idNum === 900 || idNum === 901) {
++        ctx.restore();
++        return;
++    }
++    if (idNum >= 910 && idNum <= 919) {
++        ctx.fillStyle = palette.sectionText;
++        ctx.font = `600 10px ${UI_FONT}`;
++        ctx.textAlign = 'left';
++        ctx.textBaseline = 'middle';
++        const cleanTitle = String(this.text || '').replace(/^0?[1-9]\s*[·•.]\s*/, '');
++        ctx.fillText(cleanTitle, this.x + 5, panel.pixelY + 106.5, 214);
++        ctx.restore();
++        return;
++    }
++    if (idNum === 932) {
++        // Right-aligned bus caption so Russian/English/Chinese text never touches the L/R output labels.
++        ctx.fillStyle = palette.mutedText;
++        ctx.font = `600 9.5px ${UI_FONT}`;
++        ctx.textAlign = 'right';
++        ctx.textBaseline = 'middle';
++        ctx.fillText(this.text, panel.pixelX + 402, panel.pixelY + 280.5, 230);
++        ctx.restore();
++        return;
++    }
++    if (idNum >= 600) {
++        ctx.fillStyle = palette.titleText;
++        ctx.font = `600 10px ${UI_FONT}`;
++        ctx.textBaseline = 'middle';
++        if (idNum === 701) {
++            ctx.textAlign = 'right';
++            ctx.fillText(this.text, panel.pixelX + 418, panel.pixelY + 280.5, 16);
++        } else if (idNum === 702) {
++            ctx.textAlign = 'right';
++            ctx.fillText(this.text, panel.pixelX + 460, panel.pixelY + 280.5, 16);
++        } else {
++            ctx.textAlign = 'left';
++            ctx.fillText(this.text, panel.pixelX + 20, panel.pixelY + 280.5, 76);
++        }
++        ctx.restore();
++        return;
++    }
++
++    // Parameter labels: crisp weight + 68px maxWidth keeps a clean >=8px gutter between all columns.
++    // Freeze's Feedback label (id 316) spans above the unlabelled Capture button, so it has wide clearance.
++    const maxW = (panel.jsonName === 'GrainFreeze' && idNum === 316) ? 136 : 68;
++    ctx.font = `600 9.8px ${UI_FONT}`;
++    ctx.fillStyle = palette.labelText;
++    ctx.textAlign = this.align || 'left';
++    ctx.textBaseline = this.baseline || 'top';
++    ctx.fillText(this.text, this.x, this.y - 1, maxW);
++    ctx.restore();
++}
++
++function drawInput(ctx) {
++    const panel = this.parentModule || this.parent;
++    const palette = getPulvisPalette(panel);
++    const center = this.center;
++    const isAudio = this.type === 'audio';
++    const r = isAudio ? 6 : 5;
++
++    ctx.save();
++    ctx.beginPath();
++    ctx.arc(center.x, center.y, r, 0, Math.PI * 2);
++    ctx.fillStyle = isAudio ? hexToRgba(palette.accent, 0.16) : '#0e1116';
++    ctx.fill();
++    ctx.strokeStyle = (this.connected || isAudio) ? palette.accent : 'rgba(182, 192, 206, 0.36)';
++    ctx.lineWidth = isAudio ? 1.5 : 1.15;
++    ctx.stroke();
++
++    ctx.beginPath();
++    ctx.arc(center.x, center.y, 2.2, 0, Math.PI * 2);
++    ctx.fillStyle = this.connected ? palette.accent : '#06080c';
++    ctx.fill();
++    ctx.restore();
++}
++
++function drawOutput(ctx) {
++    const panel = this.parentModule || this.parent;
++    const palette = getPulvisPalette(panel);
++    const center = this.center;
++    const sz = 11.5;
++
++    ctx.save();
++    ctx.fillStyle = hexToRgba(palette.accent, 0.18);
++    fillRoundedPath(ctx, center.x - sz / 2, center.y - sz / 2, sz, sz, 3);
++    ctx.strokeStyle = palette.accent;
++    ctx.lineWidth = 1.4;
++    strokeRoundedPath(ctx, center.x - sz / 2, center.y - sz / 2, sz, sz, 3);
++
++    ctx.beginPath();
++    ctx.arc(center.x, center.y, 2.4, 0, Math.PI * 2);
++    ctx.fillStyle = this.connected ? '#f8fafc' : '#080b10';
++    ctx.fill();
++    ctx.restore();
++}
++
++function drawButtonIncDec(ctx) {
++    const palette = getPulvisPalette(this.parent);
++    const h = 16;
++    ctx.save();
++    ctx.fillStyle = this.isPressed
++        ? palette.controlBgActive
++        : this.isHovered
++            ? palette.controlBgHover
++            : palette.controlBg;
++    fillRoundedPath(ctx, this.x, this.y, this.width, h, 3.5);
++
++    ctx.strokeStyle = this.isHovered ? palette.pillBorderActive : palette.controlBorder;
++    ctx.lineWidth = 1;
++    strokeRoundedPath(ctx, this.x + 0.5, this.y + 0.5, this.width - 1, h - 1, 3.5);
++
++    const arrowColX = this.x + this.width - 11;
++    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
++    ctx.lineWidth = 1;
++    ctx.beginPath();
++    ctx.moveTo(arrowColX + 0.5, this.y + 2.5);
++    ctx.lineTo(arrowColX + 0.5, this.y + h - 2.5);
++    ctx.stroke();
++
++    ctx.save();
++    ctx.beginPath();
++    ctx.rect(this.x + 2, this.y, this.width - 13, h);
++    ctx.clip();
++    ctx.fillStyle = palette.titleText;
++    ctx.font = `600 10px ${UI_FONT}`;
++    ctx.textAlign = 'left';
++    ctx.textBaseline = 'middle';
++    ctx.fillText(this.currentItem ?? '', this.x + 4, this.y + h / 2 + 0.3, this.width - 16);
++    ctx.restore();
++
++    const ax = arrowColX + 3;
++    ctx.fillStyle = palette.mutedText;
++    ctx.beginPath();
++    ctx.moveTo(ax + 2.5, this.y + 3.5);
++    ctx.lineTo(ax + 5, this.y + 6.8);
++    ctx.lineTo(ax, this.y + 6.8);
++    ctx.closePath();
++    ctx.fill();
++
++    ctx.beginPath();
++    ctx.moveTo(ax, this.y + 9.2);
++    ctx.lineTo(ax + 5, this.y + 9.2);
++    ctx.lineTo(ax + 2.5, this.y + 12.5);
++    ctx.closePath();
++    ctx.fill();
++
++    if (this.items?.length > 1) {
++        const segW = (this.width - 11) / this.items.length;
++        ctx.fillStyle = hexToRgba(palette.sectionAccent, 0.85);
++        fillRoundedPath(ctx, this.x + this.currentIndex * segW + 1.5, this.y + h - 2, Math.max(4, segW - 3), 1.6, 0.8);
++    }
++    ctx.restore();
++}
++
++function drawButtonText(ctx) {
++    const palette = getPulvisPalette(this.parent);
++    const by = this.y - 1;
++    const bh = this.height + 2;
++    ctx.save();
++    ctx.fillStyle = (this.isActive || this.isPressed)
++        ? palette.controlBgActive
++        : this.isHovered
++            ? palette.controlBgHover
++            : palette.controlBg;
++    fillRoundedPath(ctx, this.x, by, this.width, bh, 4);
++
++    ctx.strokeStyle = (this.isActive || this.isHovered) ? palette.sectionAccent : hexToRgba(palette.sectionAccent, 0.55);
++    ctx.lineWidth = 1.1;
++    strokeRoundedPath(ctx, this.x + 0.5, by + 0.5, this.width - 1, bh - 1, 4);
++
++    // Keep full text on the component model while displaying a crisp, legible button caption.
++    const rawText = this.text || '';
++    const btnText = rawText === 'Сохранить снимок'
++        ? 'Снимок'
++        : rawText === 'Capture snapshot'
++            ? 'Capture'
++            : rawText;
++    const innerW = this.width - 8;
++    ctx.font = `600 10px ${UI_FONT}`;
++    ctx.fillStyle = '#f1f5f9';
++    ctx.textAlign = 'center';
++    ctx.textBaseline = 'middle';
++    ctx.fillText(btnText, this.x + this.width / 2, by + bh / 2 + 0.3, innerW);
++    ctx.restore();
++}
++
++function drawKnob(ctx) {
++    const panel = this.parent;
++    const palette = getPulvisPalette(panel);
++
++    const r = this.width / 2;
++    const cx = this.x + r;
++    const cy = this.y + r;
++    const span = Math.max(1e-9, this.max - this.min);
++    const norm = Math.max(0, Math.min(1, (this.value - this.min) / span));
++    const active = this.isHovered || this.isDragging;
++
++    ctx.save();
++
++    // Recessed matte numeric readout well (calm hairline border, highlights softly on interaction).
++    const noCv = this.csoundName === 'Seed';
++    const pillX = this.x + this.width + 2;
++    const pillY = this.y + 2.5;
++    const pillW = noCv ? 42 : 31;
++    const pillH = 15;
++    ctx.fillStyle = palette.pillBg;
++    fillRoundedPath(ctx, pillX, pillY, pillW, pillH, 3);
++    ctx.strokeStyle = active ? palette.pillBorderActive : palette.pillBorder;
++    ctx.lineWidth = 1;
++    strokeRoundedPath(ctx, pillX + 0.5, pillY + 0.5, pillW - 1, pillH - 1, 3);
++
++    const shortText = formatPulvisKnobValue(this, panel, false);
++    ctx.fillStyle = active ? palette.accentSoft : palette.valueText;
++    ctx.font = `600 9.5px ${MONO_FONT}`;
++    ctx.textAlign = 'center';
++    ctx.textBaseline = 'middle';
++    ctx.fillText(shortText, pillX + pillW / 2, pillY + pillH / 2 + 0.4, pillW - 3);
++
++    // Knob arc track
++    const aStart = -Math.PI * 1.25;
++    const aEnd = aStart + Math.PI * 1.5;
++    ctx.beginPath();
++    ctx.arc(cx, cy, r + 0.5, aStart, aEnd);
++    ctx.strokeStyle = palette.knobTrack;
++    ctx.lineWidth = 2;
++    ctx.lineCap = 'round';
++    ctx.stroke();
++
++    const aVal = aStart + norm * Math.PI * 1.5;
++    const aOrigin = (this.min < 0 && this.max > 0)
++        ? aStart + ((0 - this.min) / span) * Math.PI * 1.5
++        : aStart;
++    if (Math.abs(aVal - aOrigin) > 0.03) {
++        ctx.beginPath();
++        ctx.arc(cx, cy, r + 0.5, Math.min(aOrigin, aVal), Math.max(aOrigin, aVal));
++        ctx.strokeStyle = palette.knobArc;
++        ctx.lineWidth = 2.2;
++        ctx.lineCap = 'round';
++        ctx.stroke();
++    }
++
++    // Subtle zero-detent pip tucked onto the arc rim (never overlaps the parameter label above).
++    if (this.showZeroIndicator) {
++        const isZero = Math.abs(this.value) < 0.5;
++        const zx = cx + Math.cos(aOrigin) * (r + 0.5);
++        const zy = cy + Math.sin(aOrigin) * (r + 0.5);
++        ctx.beginPath();
++        ctx.arc(zx, zy, isZero ? 1.8 : 1.3, 0, Math.PI * 2);
++        ctx.fillStyle = isZero ? palette.accentSoft : 'rgba(255, 255, 255, 0.28)';
++        ctx.fill();
++    }
++
++    // Machined aluminum rotary cap
++    const capGrad = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
++    capGrad.addColorStop(0, palette.knobCapTop);
++    capGrad.addColorStop(1, palette.knobCapBottom);
++    ctx.beginPath();
++    ctx.arc(cx, cy, r - 2, 0, Math.PI * 2);
++    ctx.fillStyle = capGrad;
++    ctx.fill();
++    ctx.strokeStyle = active ? palette.accent : 'rgba(255, 255, 255, 0.16)';
++    ctx.lineWidth = 1;
++    ctx.stroke();
++
++    // Pointer line
++    const needleAngle = aVal + Math.PI / 2;
++    ctx.save();
++    ctx.translate(cx, cy);
++    ctx.rotate(needleAngle);
++    ctx.beginPath();
++    ctx.moveTo(0, 1);
++    ctx.lineTo(0, -r + 2.4);
++    ctx.strokeStyle = palette.knobNeedle;
++    ctx.lineWidth = 1.8;
++    ctx.lineCap = 'round';
++    ctx.stroke();
++    ctx.restore();
++
++    ctx.restore();
++}
++
++function drawTooltip(ctx) {
++    const palette = getPulvisPalette(this.parent);
++    const valueText = formatPulvisKnobValue(this, this.parent, true);
++    ctx.save();
++    ctx.font = `600 11px ${UI_FONT}`;
++    ctx.textAlign = 'center';
++    ctx.textBaseline = 'middle';
++    const padding = 9;
++    const h = 23;
++    const w = ctx.measureText(valueText).width + padding * 2;
++    const tx = this.x + this.width / 2;
++    const ty = this.y - h - 8;
++
++    ctx.fillStyle = 'rgba(15, 18, 24, 0.96)';
++    fillRoundedPath(ctx, tx - w / 2, ty, w, h, 5);
++    ctx.strokeStyle = hexToRgba(palette.accent, 0.65);
++    ctx.lineWidth = 1;
++    strokeRoundedPath(ctx, tx - w / 2 + 0.5, ty + 0.5, w - 1, h - 1, 5);
++
++    ctx.fillStyle = '#f1f5f9';
++    ctx.fillText(valueText, tx, ty + h / 2 + 0.3);
++    ctx.restore();
++}
++
++export function selectPulvisWav(system, slot) {
++    const input = document.createElement('input');
++    input.type = 'file';
++    input.accept = '.wav,audio/wav,audio/wave,audio/x-wav';
++    input.onchange = async () => {
++      const file = input.files?.[0];
++      if (!file) return;
++      try {
++        await system.csoundEngine.loadGrainSample(slot, file);
++        system.showNotification(localizePulvis({
++          en: `Loaded ${file.name} into slot ${slot}. It will be available until the app closes.`,
++          zh: `已将 ${file.name} 导入采样槽 ${slot}，关闭应用后需要重新导入。`,
++          ru: `${file.name} загружен в слот ${slot}. После закрытия приложения его нужно загрузить снова.`,
++        }));
++      } catch (error) {
++        system.showNotification(error.message);
++      }
++    };
++    input.click();
++}
++
++const drawControl = { Knob: drawKnob, TextLabel: drawTextLabel, ButtonIncDec: drawButtonIncDec,
++    ButtonText: drawButtonText, Input: drawInput, Output: drawOutput, Line() {} };
++
++function handleDisplay(panel, x, y) {
++    const relX = x - panel.pixelX, relY = y - panel.pixelY;
++    if (panel.parentSystem.locked) return null;
++    if (relX < 10 || relX > 490 || relY < 32 || relY > 90) return null;
++    const controls = panel.pulvisControls;
++    const action = { type: 'component-drag', endDrag() {} };
++    if (relX >= 356) {
++        const selector = controls.get('Window');
++        selector.setValue((selector.currentIndex + 1) % selector.items.length);
++    } else if (relY < 52) {
++        if (controls.has('Slot')) {
++            const slotX = relX - 20;
++            if (relY >= 36 && relY <= 49 && slotX >= 0 && slotX < 168 && slotX % 21 < 19)
++                controls.get('Slot').setValue(Math.floor(slotX / 21) + 1);
++        } else if (relX < 200) {
++            const selector = controls.get('Wave') || controls.get('Source');
++            selector.setValue((Math.round(selector.getValue()) + 1) % (controls.has('Wave') ? 4 : 2));
++        }
++    } else {
++        if (panel.pulvisFft) return action;
++        const system = panel.parentSystem;
++        const slot = Math.round(controls.get('Slot')?.getValue());
++        if (slot && !system.csoundEngine.grainSamples.slots.has(slot)) {
++            if (relY >= 58 && relY <= 78 && relX >= 101 && relX <= 261) {
++                selectPulvisWav(system, slot);
++            }
++        } else {
++            const knob = controls.get('Position') || controls.get('PhaseWarp');
++            action.handleDrag = worldX => {
++                const pos = Math.max(0, Math.min(1, (worldX - panel.pixelX - 20) / (panel.width - 178)));
++                const frame = system.csoundEngine.state === 'running' && system.csoundEngine.getScopeBuffer(panel.moduleId + ':display');
++                let value = pos;
++                if (panel.jsonName === 'GrainFreeze' && frame?.[5] > 0) {
++                    const age = (frame[4] - pos + 1) % 1;
++                    value = Math.min(1, age / frame[5]);
++                }
++                knob.setValue(Math.round(127 * value));
++                panel.setDirty(true);
++            };
++            action.handleDrag(x);
++        }
++    }
++    panel.setDirty(true);
++    return action;
++}
++
++export function configurePulvisPanel(panel, definition) {
++    panel.jsonName = definition.type;
++    panel.uiLanguage = definition.uiLanguage;
++    panel.pulvisControls = new Map();
++    for (const comp of panel.components) {
++        const spec = definition.components.find(item => String(item.id) === comp.id);
++        if (spec.connectorNameI18n) comp.label = spec.ConnectorName;
++        if (spec.csoundName) {
++            comp.csoundName = spec.csoundName;
++            panel.pulvisControls.set(spec.csoundName, comp);
++        }
++        if (drawControl[spec.componentType]) comp.draw = drawControl[spec.componentType];
++        if (spec.componentType === 'Knob') {
++            comp.drawTooltip = drawTooltip;
++            const click = comp.handleClick.bind(comp);
++            comp.handleClick = (x, y) => {
++                if (comp.isPointInside(x, y)) {
++                    const now = performance.now();
++                    if (now - (comp.lastPulvisClick ?? -Infinity) < 320) {
++                        comp.lastPulvisClick = -Infinity;
++                        comp.setValue(spec.defaultValue);
++                        return {type:'component-drag', endDrag() {}};
++                    }
++                    comp.lastPulvisClick = now;
++                }
++                const drag = click(x, y);
++                if (!drag) return drag;
++                let rawValue = comp.value, previousY = y;
++                drag.handleDrag = (_worldX, worldY, fine) => {
++                    const step = (comp.max - comp.min) * comp.verticalSensitivity / 400;
++                    rawValue = Math.max(comp.min, Math.min(comp.max, rawValue + (previousY - worldY) * step * (fine ? 0.2 : 1)));
++                    previousY = worldY;
++                    const discrete = ['Wave', 'Slot', 'Seed'].includes(spec.csoundName)
++                        || (!fine && ['Pitch', 'PitchJitter'].includes(spec.csoundName));
++                    comp.setValue(discrete ? Math.round(rawValue) : rawValue);
++                };
++                return drag;
++            };
++        }
++    }
++    const startDrag = panel.startDrag.bind(panel);
++    panel.startDrag = (x, y, system) => handleDisplay(panel, x, y) || startDrag(x, y, system);
++    panel.draw = function(ctx) {
++        if (!this.dirty || this.pixelX === null || this.pixelY === null) return;
++        ctx.save();
++        ctx.globalAlpha = this.opacity;
++        drawPulvisStudioChassisAndOled(this, ctx, getPulvisPalette(this));
++        for (const control of this.components) control.draw(ctx);
++        for (const control of this.pulvisControls.values()) {
++            if (control.showTooltip || control.isDragging) control.drawTooltip?.(ctx);
++        }
++        ctx.restore();
++        this.dirty = false;
++    };
++}
++
++export function switchPulvisLanguage(system, preference) {
++    setPulvisPreference(preference);
++    const language = getPulvisLanguage();
++    const registry = system.moduleFactory.moduleRegistry;
++    for (const definition of Object.values(registry)) {
++        if (definition.library === 'pulvis') localizeDefinition(definition, language);
++    }
++    for (const panel of system.components) {
++        if (!panel.pulvisControls) continue;
++        const definition = registry[panel.jsonName];
++        panel.uiLanguage = language;
++        panel.title = definition.displayName;
++        const specs = new Map(definition.components.map(item => [String(item.id), item]));
++        for (const comp of panel.components) {
++            const spec = specs.get(comp.id);
++            if (spec?.textI18n) comp.text = spec.text;
++            if (spec?.connectorNameI18n) comp.label = spec.ConnectorName;
++            if (spec?.itemsI18n) {
++                comp.items = spec.items.split(',');
++                comp.currentItem = comp.items[comp.currentIndex];
++            }
++        }
++        panel.setDirty(true);
++    }
++    system.forceRedraw();
++}
+diff --git a/src/ui/module-menu.css b/src/ui/module-menu.css
+new file mode 100644
+index 0000000..e5b412c
+--- /dev/null
++++ b/src/ui/module-menu.css
+@@ -0,0 +1,104 @@
++#module-context-menu {
++  display: none;
++  position: fixed;
++  z-index: 15000;
++  width: min(17rem, calc(100vw - 16px));
++  box-sizing: border-box;
++  padding: 6px;
++  color: #e7efeb;
++  background: #202a29;
++  border: 1px solid #50615c;
++  border-radius: 12px;
++  font: 13px/1.45 system-ui, sans-serif;
++  color-scheme: dark;
++}
++#module-context-menu .module-menu-title {
++  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
++  padding: 9px 9px 12px; border-bottom: 1px solid #47534f;
++  font-size: 15px; font-weight: 650; overflow-wrap: anywhere;
++}
++#module-context-menu .module-category { color: #adc3ba; font-size: 12px; font-weight: 450; white-space: nowrap; flex-shrink: 0; }
++#module-context-menu .sample-info { color: #c0ccc6; padding: 10px 9px 5px; overflow-wrap: anywhere; }
++#module-context-menu .module-action, #module-context-menu .module-layers button {
++  box-sizing: border-box; border: 0; border-radius: 6px; color: inherit; background: transparent;
++  cursor: pointer; font: inherit;
++}
++#module-context-menu .module-action { width: 100%; padding: 9px; text-align: start; font-weight: 580; }
++#module-context-menu button.module-action:hover, #module-context-menu .module-layers button:hover { background: #34443f; }
++#module-context-menu button:focus-visible { outline: 2px solid #aae0cb; outline-offset: -2px; }
++#module-context-menu .module-layers { display: flex; gap: 3px; align-items: center; margin: 5px 0; padding: 8px; border-block: 1px solid #47534f; }
++#module-context-menu .module-layers span { flex: 1; color: #becac5; }
++#module-context-menu .module-layers button { padding: 5px 9px; }
++#module-context-menu .module-layers button[aria-pressed=true] { color: #102720; background: #b0dbc7; font-weight: 650; }
++#module-context-menu .destructive { color: #ffb9ab; }
++
++#module-context-menu .pulvis-language { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 9px; }
++#module-context-menu .pulvis-language select {
++  font: inherit;
++  padding: 4px 9px;
++  border: 1px solid #50615c;
++  border-radius: 7px;
++  background: #283432;
++  color: #e7efeb;
++  cursor: pointer;
++}
++#module-context-menu .pulvis-language select:hover { background: #31403d; border-color: #6b827b; }
++#module-context-menu .pulvis-language select:focus-visible { outline: 2px solid #aae0cb; outline-offset: -1px; }
++@supports (appearance: base-select) {
++  #module-context-menu .pulvis-language select,
++  #module-context-menu .pulvis-language select::picker(select) {
++    appearance: base-select;
++  }
++  #module-context-menu .pulvis-language select {
++    align-items: center;
++    gap: 6px;
++    padding: 4px 10px;
++    border-radius: 7px;
++  }
++  #module-context-menu .pulvis-language select::picker(select) {
++    margin-top: 4px;
++    padding: 4px;
++    border: 1px solid #50615c;
++    border-radius: 9px;
++    background: #202a29;
++    color: #e7efeb;
++    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
++  }
++  #module-context-menu .pulvis-language select option {
++    padding: 5px 10px;
++    border-radius: 6px;
++    background: transparent;
++    color: #e7efeb;
++  }
++  #module-context-menu .pulvis-language select option:hover { background: #34443f; }
++  #module-context-menu .pulvis-language select option:checked { background: #2d3d38; font-weight: 600; }
++}
++
++.pulvis-about-dialog {
++  position: fixed;
++  inset: 0;
++  margin: auto;
++  width: min(26rem, calc(100vw - 2rem));
++  max-height: calc(100dvh - 2rem);
++  overflow: auto;
++  box-sizing: border-box;
++  padding: 24px;
++  border: 1px solid #526861;
++  border-radius: 12px;
++  background: #192321;
++  color: #f1f6f3;
++  font: 14px/1.45 system-ui, sans-serif;
++  box-shadow: 0 12px 40px #0006;
++  color-scheme: dark;
++}
++.pulvis-about-dialog::backdrop { background: rgb(10 16 16 / 58%); }
++.pulvis-about-dialog img { float: right; border-radius: 8px; }
++.pulvis-about-dialog h2 { margin: 0; font-size: 21px; }
++.pulvis-about-dialog p { margin: 3px 0 16px; color: #bdcbc5; }
++.pulvis-about-dialog dl { clear: both; border-block: 1px solid #42534d; padding: 14px 0; margin: 0 0 14px; }
++.pulvis-about-dialog dt { color: #bdcbc5; font-size: 12px; }
++.pulvis-about-dialog dd { margin: 2px 0 12px; overflow-wrap: anywhere; }
++.pulvis-about-dialog dd:last-child { margin-bottom: 0; }
++.pulvis-about-dialog a { color: #b0e8d4; }
++.pulvis-about-dialog small { display: block; color: #bdcbc5; white-space: pre-line; }
++.pulvis-about-dialog button { display: block; margin: 16px 0 0 auto; border: 0; border-radius: 6px; padding: 6px 16px; color: #12241e; background: #b0dbc7; font: inherit; cursor: pointer; }
+diff --git a/src/ui/positionContextMenu.js b/src/ui/positionContextMenu.js
+new file mode 100644
+index 0000000..ec8a4d3
+--- /dev/null
++++ b/src/ui/positionContextMenu.js
+@@ -0,0 +1,10 @@
++export function positionContextMenu(menu, x, y) {
++    const inset = 8;
++    menu.style.maxHeight = 'calc(100dvh - 16px)';
++    menu.style.overflowY = 'auto';
++    menu.style.display = 'block';
++    menu.scrollTop = 0;
++    const {width, height} = menu.getBoundingClientRect();
++    menu.style.left = Math.max(inset, Math.min(x, window.innerWidth - width - inset)) + 'px';
++    menu.style.top = Math.max(inset, Math.min(y, window.innerHeight - height - inset)) + 'px';
++}
+diff --git a/src/utils/locale.js b/src/utils/locale.js
+new file mode 100644
+index 0000000..0ab9d23
+--- /dev/null
++++ b/src/utils/locale.js
+@@ -0,0 +1,49 @@
++// Grain library interface languages follow the preferred browser/system locale.
++const supported = new Set(['zh', 'ru', 'en']);
++
++export function getUiLanguage(languages = undefined) {
++    const preferences = languages ?? (typeof navigator !== 'undefined'
++        ? [...(navigator.languages || []), navigator.language]
++        : []);
++    for (const preference of Array.isArray(preferences) ? preferences : [preferences]) {
++        const code = String(preference || '').toLowerCase().split(/[-_]/, 1)[0];
++        if (supported.has(code)) return code;
++    }
++    return 'en';
++}
++
++export function localize(text, language = getUiLanguage()) {
++    if (!text || typeof text !== 'object' || Array.isArray(text)) return text ?? '';
++    return text[language] ?? text.en ?? text.zh ?? text.ru ?? '';
++}
++
++const preferenceKey = 'pulvis-ui-language';
++let pulvisPreference = 'auto';
++try {
++    const saved = globalThis.window?.localStorage?.getItem(preferenceKey);
++    if (supported.has(saved)) pulvisPreference = saved;
++} catch {}
++
++export const getPulvisPreference = () => pulvisPreference;
++export const getPulvisLanguage = () => pulvisPreference === 'auto' ? getUiLanguage() : pulvisPreference;
++export const localizePulvis = text => localize(text, getPulvisLanguage());
++
++export function setPulvisPreference(value) {
++    if (value !== 'auto' && !supported.has(value)) return;
++    pulvisPreference = value;
++    try {
++        if (value === 'auto') globalThis.window?.localStorage?.removeItem(preferenceKey);
++        else globalThis.window?.localStorage?.setItem(preferenceKey, value);
++    } catch {}
++}
++
++export function localizeDefinition(definition, language) {
++    definition.uiLanguage = language;
++    if (definition.displayNameI18n) definition.displayName = localize(definition.displayNameI18n, language);
++    if (definition.tooltipI18n) definition.tooltip = localize(definition.tooltipI18n, language);
++    for (const item of definition.components || []) {
++        if (item.itemsI18n) item.items = localize(item.itemsI18n, language);
++        if (item.textI18n) item.text = localize(item.textI18n, language);
++        if (item.connectorNameI18n) item.ConnectorName = localize(item.connectorNameI18n, language);
++    }
++}
+diff --git a/vite.config.js b/vite.config.js
+index 3e4301f..4ed1a95 100644
+--- a/vite.config.js
++++ b/vite.config.js
+@@ -70,7 +70,7 @@ function stableModulesOnly() {
+         for (const file of fs.readdirSync(modulesSrc)) {
+           if (!file.endsWith('.js')) continue
+           const code = fs.readFileSync(path.join(modulesSrc, file), 'utf-8')
+-          const m = code.match(/\bstatus\s*:\s*['"](\w+)['"]/)
++          const m = code.match(/\bstatus["']?\s*:\s*['"](\w+)['"]/)
+           const status = m ? m[1] : 'dev'
+           if (SHIP_STATUSES.includes(status)) {
+             kept.push(file.replace(/\.js$/, ''))
+@@ -106,6 +106,12 @@ function stableModulesOnly() {
+           }
+         }
+ 
++        for (const name of ['_meta.json', 'README.md', 'README.zh-CN.md', 'README.ru.md', 'SOURCES.md', 'LICENSE']) {
++          const source = path.join(libSrc, name)
++          if (fs.existsSync(source)) fs.copyFileSync(source, path.join(DST, libName, name))
++        }
++        const assets = path.join(libSrc, 'assets')
++        if (fs.existsSync(assets)) fs.cpSync(assets, path.join(DST, libName, 'assets'), { recursive: true })
+         const metaSrc = path.join(libSrc, 'meta.json')
+         if (fs.existsSync(metaSrc)) {
+           fs.copyFileSync(metaSrc, path.join(DST, libName, 'meta.json'))
+@@ -209,4 +215,4 @@ export default defineConfig(({ mode }) => ({
+   },
+ 
+   publicDir: 'public'
+-}))
+\ No newline at end of file
++}))
