@@ -14,23 +14,27 @@
 
 ## Installation
 
+<p align="center">
+  <a href="https://github.com/gleb812/csmodular"><img src="assets/downloads/csmodular-host.png" width="231" alt="Open the CsModular host repository on GitHub"></a>
+</p>
+
 Close **CsModular 0.1.5** with Pulvis host integration, then click the installer for your system and processor.
 
-<p>
+<p align="center">
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="Download Pulvis 0.0.5 · Windows x64"></a>
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe"><img src="assets/downloads/windows-arm64.png" width="231" alt="Download Pulvis 0.0.5 · Windows ARM64"></a>
 </p>
 
 Run the `.exe` and select the `libraries/pulvis` folder in your CsModular installation. Choose x64 for Intel or AMD PCs, or ARM64 for Windows on Arm.
 
-<p>
+<p align="center">
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg"><img src="assets/downloads/macos-arm64.png" width="231" alt="Download Pulvis 0.0.5 · macOS Apple Silicon"></a>
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg"><img src="assets/downloads/macos-x64.png" width="231" alt="Download Pulvis 0.0.5 · macOS Intel"></a>
 </p>
 
 Open the `.pkg` and follow the installer. Choose Apple Silicon for an M-series Mac or Intel for an Intel Mac.
 
-<p>
+<p align="center">
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb"><img src="assets/downloads/linux-x64.png" width="231" alt="Download Pulvis 0.0.5 · Linux amd64 .deb"></a>
 </p>
 

@@ -14,23 +14,27 @@
 
 ## 安装与卸载
 
+<p align="center">
+  <a href="https://github.com/gleb812/csmodular"><img src="assets/downloads/csmodular-host.png" width="231" alt="前往 GitHub 查看 CsModular 宿主仓库"></a>
+</p>
+
 请先关闭已集成 Pulvis 的 **CsModular 0.1.5**，再点击与你的系统和处理器对应的安装包。
 
-<p>
+<p align="center">
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="下载 Pulvis 0.0.5 · Windows x64"></a>
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe"><img src="assets/downloads/windows-arm64.png" width="231" alt="下载 Pulvis 0.0.5 · Windows ARM64"></a>
 </p>
 
 Intel 或 AMD 电脑选 x64，Arm 电脑选 ARM64。运行 `.exe`，在安装向导中选择 CsModular 下的 `libraries/pulvis` 文件夹。
 
-<p>
+<p align="center">
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg"><img src="assets/downloads/macos-arm64.png" width="231" alt="下载 Pulvis 0.0.5 · macOS Apple Silicon"></a>
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg"><img src="assets/downloads/macos-x64.png" width="231" alt="下载 Pulvis 0.0.5 · macOS Intel"></a>
 </p>
 
 M 系列芯片的 Mac 选 Apple Silicon，Intel 芯片的 Mac 选 Intel。打开 `.pkg`，按安装器提示完成安装。
 
-<p>
+<p align="center">
   <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb"><img src="assets/downloads/linux-x64.png" width="231" alt="下载 Pulvis 0.0.5 · Linux amd64 .deb"></a>
 </p>
 
