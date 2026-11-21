@@ -12,16 +12,40 @@
 
 <p align="center"><strong>Three original Csound granular synthesis modules for CsModular.</strong></p>
 
-<p align="center">
-  Version 0.0.5 ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe">Windows x64</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe">Windows ARM64</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg">macOS Apple Silicon</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg">macOS Intel</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb">Linux x64 (.deb)</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip">Source ZIP</a> ·
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt">SHA-256</a>
+## Installation
+
+Close **CsModular 0.1.5** with Pulvis host integration, then click the installer for your system and processor.
+
+<p>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe"><img src="https://badgen.net/badge/Windows/x64/35678b?icon=download&amp;labelColor=252b30" height="30" alt="Download Pulvis 0.0.5 · Windows x64"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe"><img src="https://badgen.net/badge/Windows/ARM64/35678b?icon=download&amp;labelColor=252b30" height="30" alt="Download Pulvis 0.0.5 · Windows ARM64"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg"><img src="https://badgen.net/badge/macOS/Apple%20Silicon/685488?icon=download&amp;labelColor=252b30" height="30" alt="Download Pulvis 0.0.5 · macOS Apple Silicon"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg"><img src="https://badgen.net/badge/macOS/Intel/685488?icon=download&amp;labelColor=252b30" height="30" alt="Download Pulvis 0.0.5 · macOS Intel"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb"><img src="https://badgen.net/badge/Linux/amd64%20.deb/486b47?icon=download&amp;labelColor=252b30" height="30" alt="Download Pulvis 0.0.5 · Linux amd64 .deb"></a>
 </p>
+
+Pulvis 0.0.5 · [Source ZIP](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip) · [SHA-256 checksums](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt)
+
+- **Windows** — Run the `.exe` and select the `libraries/pulvis` folder in your CsModular installation. Choose x64 for Intel or AMD PCs, or ARM64 for Windows on Arm.
+- **macOS** — Open the `.pkg` and follow the installer. Choose Apple Silicon for an M-series Mac or Intel for an Intel Mac.
+- **Linux** — On Debian or Ubuntu, run this command from the folder containing the download.
+
+  ```sh
+  sudo apt install ./Pulvis-0.0.5-linux-x64.deb
+  ```
+
+Reopen CsModular and press **Space**. The module browser lists the three instruments under **Pulvis**.
+
+<details>
+<summary>Custom paths, upgrades and removal</summary>
+
+For a custom host location, run `pulvis-install /path/to/CsModular.app` on macOS or `pulvis-install /path/to/csmodular/libraries` on Linux.
+
+When upgrading from `granular`, the installer migrates the library to `pulvis`. Existing patches keep working.
+
+To uninstall, use **Installed apps** on Windows, `pulvis-install auto-uninstall` on macOS, or `sudo apt remove pulvis` on Linux.
+
+</details>
 
 ## Modules
 
@@ -32,39 +56,6 @@
 All three modules share an original 64-voice Csound granular engine with live oscilloscope and frequency spectrum displays, per-parameter CV modulation inputs, and three interface languages (English, Simplified Chinese, and Russian).
 
 During playback, Grain Osc shows its carrier and output waveform, Grain Freeze shows its recording or captured snapshot, and Grain Sample shows the selected WAV. The moving dots show where active grains are reading and how far they have travelled along the window curve.
-
-## Installation
-
-> Install the **CsModular 0.1.5** host first, and close CsModular before installing Pulvis.
-
-### Windows (x64 & ARM64)
-
-1. Download the setup wizard for your PC (verify with [SHA256SUMS.txt](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt)):
-   - **Windows x64 (Intel / AMD):** [Pulvis-0.0.5-windows-x64.exe](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe)
-   - **Windows ARM64:** [Pulvis-0.0.5-windows-arm64.exe](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe)
-2. Run the setup wizard and select your CsModular `libraries/pulvis` folder.
-3. Open CsModular — **Pulvis** automatically appears in the module list.
-4. **Uninstall:** Use Windows *Installed apps*, or run `unins000.exe` inside the plugin folder.
-
-### macOS
-
-- [Download for Apple Silicon (.pkg)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg)
-- [Download for Intel Mac (.pkg)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg)
-
-The download links will work when the installers are uploaded to the [0.0.5 release](https://github.com/NJyutong/csmodular-pulvis/releases/tag/v0.0.5).
-
-### Linux (x64 Debian / Ubuntu)
-
-1. Download [Pulvis-0.0.5-linux-x64.deb](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb) (standard native Debian package — no WebView, GTK, or WebKit dependencies).
-2. Install with `apt`:
-   ```sh
-   sudo apt install ./Pulvis-0.0.5-linux-x64.deb
-   ```
-   System CsModular installations are detected and registered automatically. For a custom CsModular path, run `pulvis-install /path/to/csmodular/libraries`.
-3. Open CsModular — **Pulvis** automatically appears in the module list.
-4. **Uninstall:** Run `sudo apt remove pulvis` (automatically removes Pulvis from registered host folders).
-
-*Upgrading from an older `granular` install:* The installer automatically migrates the folder to `pulvis`, and existing patches referencing `granular` continue to load seamlessly.
 
 ## Quick Start
 
