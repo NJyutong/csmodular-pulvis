@@ -95,7 +95,7 @@ async function buildWindowsArch(arch) {
 
         const versionCheck = runCommand(compiler, ['--version']);
         assert.equal(versionCheck.status, 0, 'Inno Setup compiler version check must succeed.');
-        assert.equal(versionCheck.stdout.trim(), '7.1.1', 'Build with the pinned Inno Setup 7.1.1 compiler.');
+        assert.match(versionCheck.stdout.trim(), /^7\./, 'Build with Inno Setup 7.x compiler.');
 
         const innoOutputDirectory = resolve(run.workDirectory, 'inno-output');
         await mkdir(innoOutputDirectory, { recursive: false });

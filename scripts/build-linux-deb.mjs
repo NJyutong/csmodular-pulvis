@@ -153,10 +153,15 @@ try {
 
     const metadata = runCommand('dpkg-deb', ['--field', builtDeb, 'Version', 'Architecture', 'Package', 'Depends']);
     assert.equal(metadata.status, 0, 'Debian package metadata must be readable.');
-    const fields = metadata.stdout.trim().split(/\r?\n/).map(value => value.trim());
-    assert(fields.includes(version), 'Debian package version matches the plugin version.');
-    assert(fields.includes('amd64'), 'Debian package architecture is amd64.');
-    assert(fields.includes('pulvis'), 'Debian package name is pulvis.');
+    const fieldMap = new Map(
+        metadata.stdout.trim().split(/\r?\n/).map(line => {
+            const idx = line.indexOf(':');
+            return idx > 0 ? [line.slice(0, idx).trim(), line.slice(idx + 1).trim()] : [line.trim(), ''];
+        }),
+    );
+    assert.equal(fieldMap.get('Version'), version, 'Debian package version matches the plugin version.');
+    assert.equal(fieldMap.get('Architecture'), 'amd64', 'Debian package architecture is amd64.');
+    assert.equal(fieldMap.get('Package'), 'pulvis', 'Debian package name is pulvis.');
     assert(!metadata.stdout.toLowerCase().includes('webkit'), 'Debian package has no WebKit/WebView dependency.');
 
     const artifact = await stageVerifiedArtifact({

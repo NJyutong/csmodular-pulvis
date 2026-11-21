@@ -166,7 +166,7 @@ if (!archiveMode) {
     ]) {
         assert(workflow.includes(expectedName), `CI publishes ${expectedName}`);
     }
-    assert(workflow.includes('innosetup-7.1.1-x64.exe'), 'Windows CI pins the native installer compiler');
+    assert(workflow.includes('JRSoftware.InnoSetup.7'), 'Windows CI installs Inno Setup 7');
     assert(workflow.includes('node scripts/build-windows-installer.mjs --arch=x64')
         && workflow.includes('node scripts/build-windows-installer.mjs --arch=arm64'),
         'Windows CI builds separate x64 and ARM64 installers');
