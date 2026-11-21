@@ -41,19 +41,18 @@ jobs:
           node scripts/verify-icons.mjs
           node scripts/package-smoke.mjs
 
-      - name: Install Inno Setup 7.1.1
+      - name: Install Inno Setup 7
         shell: pwsh
         run: |
-          $installer = Join-Path $env:RUNNER_TEMP 'innosetup-7.1.1-x64.exe'
-          Invoke-WebRequest -Uri 'https://files.jrsoftware.org/is/7/innosetup-7.1.1-x64.exe' -OutFile $installer
-          $signature = Get-AuthenticodeSignature -LiteralPath $installer
-          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notlike '*Pyrsys B.V.*') {
-            throw 'The Inno Setup compiler signature is invalid.'
-          }
-          $installDir = Join-Path $env:RUNNER_TEMP 'InnoSetup7'
-          Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$installDir") -Wait
-          if (-not (Test-Path -LiteralPath (Join-Path $installDir 'ISCC.exe'))) {
-            throw 'Inno Setup 7.1.1 compiler was not installed.'
+          winget install --id JRSoftware.InnoSetup.7 -e --silent --accept-package-agreements --accept-source-agreements
+          $candidates = @(
+            (Join-Path $env:ProgramFiles 'Inno Setup 7'),
+            (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 7'),
+            (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 7')
+          )
+          $installDir = $candidates | Where-Object { $_ -and (Test-Path -LiteralPath (Join-Path $_ 'ISCC.exe')) } | Select-Object -First 1
+          if (-not $installDir) {
+            throw 'Inno Setup 7 compiler (ISCC.exe) was not found after winget install.'
           }
           "INNO_SETUP_HOME=$installDir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
@@ -111,19 +110,18 @@ jobs:
           node scripts/verify-icons.mjs
           node scripts/package-smoke.mjs
 
-      - name: Install Inno Setup 7.1.1
+      - name: Install Inno Setup 7
         shell: pwsh
         run: |
-          $installer = Join-Path $env:RUNNER_TEMP 'innosetup-7.1.1-x64.exe'
-          Invoke-WebRequest -Uri 'https://files.jrsoftware.org/is/7/innosetup-7.1.1-x64.exe' -OutFile $installer
-          $signature = Get-AuthenticodeSignature -LiteralPath $installer
-          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notlike '*Pyrsys B.V.*') {
-            throw 'The Inno Setup compiler signature is invalid.'
-          }
-          $installDir = Join-Path $env:RUNNER_TEMP 'InnoSetup7'
-          Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$installDir") -Wait
-          if (-not (Test-Path -LiteralPath (Join-Path $installDir 'ISCC.exe'))) {
-            throw 'Inno Setup 7.1.1 compiler was not installed.'
+          winget install --id JRSoftware.InnoSetup.7 -e --silent --accept-package-agreements --accept-source-agreements
+          $candidates = @(
+            (Join-Path $env:ProgramFiles 'Inno Setup 7'),
+            (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 7'),
+            (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 7')
+          )
+          $installDir = $candidates | Where-Object { $_ -and (Test-Path -LiteralPath (Join-Path $_ 'ISCC.exe')) } | Select-Object -First 1
+          if (-not $installDir) {
+            throw 'Inno Setup 7 compiler (ISCC.exe) was not found after winget install.'
           }
           "INNO_SETUP_HOME=$installDir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
