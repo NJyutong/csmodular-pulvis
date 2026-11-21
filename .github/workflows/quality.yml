@@ -1,0 +1,59 @@
+name: Host compatibility and regression checks
+
+on:
+  workflow_dispatch:
+    inputs:
+      host_repository:
+        description: Owner/repository containing the clean and installed host snapshots
+        required: true
+        type: string
+      host_source_ref:
+        description: Git ref for the clean host baseline
+        required: true
+        type: string
+      host_ui_ref:
+        description: Git ref for the installed host UI snapshot
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  host-compatibility:
+    runs-on: windows-latest
+    steps:
+      - name: Check out Pulvis plugin
+        uses: actions/checkout@v4
+
+      - name: Check out clean host source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.host_repository }}
+          ref: ${{ inputs.host_source_ref }}
+          path: host-source
+          fetch-depth: 0
+          token: ${{ secrets.HOST_CHECKOUT_TOKEN || github.token }}
+
+      - name: Check out installed host UI snapshot
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.host_repository }}
+          ref: ${{ inputs.host_ui_ref }}
+          path: host-ui
+          fetch-depth: 0
+          token: ${{ secrets.HOST_CHECKOUT_TOKEN || github.token }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install declared plugin dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run host compatibility and regression suite
+        env:
+          CSMODULAR_HOST_ROOT: ${{ github.workspace }}\host-source
+          CSMODULAR_UI_HOST_ROOT: ${{ github.workspace }}\host-ui
+          CHROME_PATH: C:\Program Files\Google\Chrome\Application\chrome.exe
+        run: node scripts/check-suite.mjs
