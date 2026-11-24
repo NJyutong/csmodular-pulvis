@@ -6,7 +6,7 @@
 
 </div>
 
-<p align="center"><img src="assets/pulvis-header-zh-CN.png" width="760" alt="微粒颗粒合成，墨点绘成的声音山形"></p>
+<p align="center"><a href="https://pulvis.cnquake.xyz/"><img src="assets/pulvis-header-zh-CN.png" width="760" alt="微粒颗粒合成，墨点绘成的声音山形"></a></p>
 
 <p align="center"><strong>把时间停驻，让音色生长。</strong></p>
 

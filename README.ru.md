@@ -6,7 +6,7 @@
 
 </div>
 
-<p align="center"><img src="assets/pulvis-header-ru.png" width="760" alt="Пульвис — гранулярный синтез, волна в срезах ленты"></p>
+<p align="center"><a href="https://pulvis.cnquake.xyz/"><img src="assets/pulvis-header-ru.png" width="760" alt="Пульвис — гранулярный синтез, волна в срезах ленты"></a></p>
 
 <p align="center"><strong>Время, замри — дай тембрам расти!</strong></p>
 

@@ -6,7 +6,7 @@
 
 </div>
 
-<p align="center"><img src="assets/pulvis-header-en.png" width="760" alt="Pulvis granular instruments with a circular oscillator trace"></p>
+<p align="center"><a href="https://pulvis.cnquake.xyz/"><img src="assets/pulvis-header-en.png" width="760" alt="Pulvis granular instruments with a circular oscillator trace"></a></p>
 
 <p align="center"><strong>Freeze time. Let tones climb.</strong></p>
 
