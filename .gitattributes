@@ -1,6 +1,13 @@
 # Unified diff context lines require their leading space, including blank lines.
 *.patch text eol=lf whitespace=-blank-at-eol
 scripts/build-linux-deb.sh text eol=lf
+# Install verification hashes the shipped payload bytes on every platform.
+csound/GrainCore.txt text eol=lf
+modules/*.js text eol=lf
+modules/*.txt text eol=lf
+/_index.json text eol=lf
+/_meta.json text eol=lf
+examples/pulvis-demo.json text eol=lf
 
 # Keep release archives focused on the plugin, excluding development-only files.
 .github/** export-ignore
