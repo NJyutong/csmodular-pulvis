@@ -35,11 +35,7 @@ jobs:
           node-version: 22
 
       - name: Verify release inputs
-        run: |
-          node scripts/sync-version.mjs
-          node scripts/verify-icons.mjs
-          node scripts/package-smoke.mjs
-          node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){const b=fs.readFileSync(f),g=c.createHash('sha256').update(b).digest('hex');if(g!==h)throw new Error('SHA-256 mismatch: '+f+' (expected '+h.slice(0,12)+', got '+g.slice(0,12)+', bytes='+b.length+')')}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
+        run: node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){const b=fs.readFileSync(f),g=c.createHash('sha256').update(b).digest('hex');if(g!==h)throw new Error('SHA-256 mismatch: '+f+' (expected '+h.slice(0,12)+', got '+g.slice(0,12)+', bytes='+b.length+')')}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
 
       - name: Install Inno Setup 7
         shell: pwsh
@@ -104,11 +100,7 @@ jobs:
           node-version: 22
 
       - name: Verify release inputs
-        run: |
-          node scripts/sync-version.mjs
-          node scripts/verify-icons.mjs
-          node scripts/package-smoke.mjs
-          node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){const b=fs.readFileSync(f),g=c.createHash('sha256').update(b).digest('hex');if(g!==h)throw new Error('SHA-256 mismatch: '+f+' (expected '+h.slice(0,12)+', got '+g.slice(0,12)+', bytes='+b.length+')')}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
+        run: node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){const b=fs.readFileSync(f),g=c.createHash('sha256').update(b).digest('hex');if(g!==h)throw new Error('SHA-256 mismatch: '+f+' (expected '+h.slice(0,12)+', got '+g.slice(0,12)+', bytes='+b.length+')')}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
 
       - name: Install Inno Setup 7
         shell: pwsh
@@ -172,11 +164,7 @@ jobs:
           node-version: 22
 
       - name: Verify release inputs
-        run: |
-          node scripts/sync-version.mjs
-          node scripts/verify-icons.mjs
-          node scripts/package-smoke.mjs
-          node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){const b=fs.readFileSync(f),g=c.createHash('sha256').update(b).digest('hex');if(g!==h)throw new Error('SHA-256 mismatch: '+f+' (expected '+h.slice(0,12)+', got '+g.slice(0,12)+', bytes='+b.length+')')}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
+        run: node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){const b=fs.readFileSync(f),g=c.createHash('sha256').update(b).digest('hex');if(g!==h)throw new Error('SHA-256 mismatch: '+f+' (expected '+h.slice(0,12)+', got '+g.slice(0,12)+', bytes='+b.length+')')}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
 
       - name: Build, verify and stage macOS Apple Silicon PKG plus SHA-256
         run: node scripts/build-macos-pkg.mjs --arch=arm64 "$PULVIS_TASK_ROOT/artifacts"
@@ -223,11 +211,7 @@ jobs:
           node-version: 22
 
       - name: Verify release inputs
-        run: |
-          node scripts/sync-version.mjs
-          node scripts/verify-icons.mjs
-          node scripts/package-smoke.mjs
-          node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){const b=fs.readFileSync(f),g=c.createHash('sha256').update(b).digest('hex');if(g!==h)throw new Error('SHA-256 mismatch: '+f+' (expected '+h.slice(0,12)+', got '+g.slice(0,12)+', bytes='+b.length+')')}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
+        run: node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){const b=fs.readFileSync(f),g=c.createHash('sha256').update(b).digest('hex');if(g!==h)throw new Error('SHA-256 mismatch: '+f+' (expected '+h.slice(0,12)+', got '+g.slice(0,12)+', bytes='+b.length+')')}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
 
       - name: Build, verify and stage macOS Intel PKG plus SHA-256
         run: node scripts/build-macos-pkg.mjs --arch=x64 "$PULVIS_TASK_ROOT/artifacts"
@@ -274,11 +258,7 @@ jobs:
           node-version: 22
 
       - name: Verify release inputs
-        run: |
-          node scripts/sync-version.mjs
-          node scripts/verify-icons.mjs
-          node scripts/package-smoke.mjs
-          node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){const b=fs.readFileSync(f),g=c.createHash('sha256').update(b).digest('hex');if(g!==h)throw new Error('SHA-256 mismatch: '+f+' (expected '+h.slice(0,12)+', got '+g.slice(0,12)+', bytes='+b.length+')')}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
+        run: node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){const b=fs.readFileSync(f),g=c.createHash('sha256').update(b).digest('hex');if(g!==h)throw new Error('SHA-256 mismatch: '+f+' (expected '+h.slice(0,12)+', got '+g.slice(0,12)+', bytes='+b.length+')')}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
 
       - name: Build, verify and stage Debian package plus SHA-256
         run: node scripts/build-linux-deb.mjs "$PULVIS_TASK_ROOT/artifacts"
