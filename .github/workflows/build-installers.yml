@@ -40,6 +40,7 @@ jobs:
           node scripts/build-modules.mjs
           node scripts/verify-icons.mjs
           node scripts/package-smoke.mjs
+          node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){if(c.createHash('sha256').update(fs.readFileSync(f)).digest('hex')!==h)throw new Error('SHA-256 mismatch: '+f)}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
 
       - name: Install Inno Setup 7
         shell: pwsh
@@ -63,7 +64,7 @@ jobs:
       - name: Upload verified Windows x64 installer
         uses: actions/upload-artifact@v4
         with:
-          name: pulvis-windows-x64-v0.0.5
+          name: pulvis-windows-x64-v0.0.6
           path: ${{ env.PULVIS_TASK_ROOT }}/artifacts/*
           if-no-files-found: error
           retention-days: 30
@@ -109,6 +110,7 @@ jobs:
           node scripts/build-modules.mjs
           node scripts/verify-icons.mjs
           node scripts/package-smoke.mjs
+          node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){if(c.createHash('sha256').update(fs.readFileSync(f)).digest('hex')!==h)throw new Error('SHA-256 mismatch: '+f)}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
 
       - name: Install Inno Setup 7
         shell: pwsh
@@ -132,7 +134,7 @@ jobs:
       - name: Upload verified Windows ARM64 installer
         uses: actions/upload-artifact@v4
         with:
-          name: pulvis-windows-arm64-v0.0.5
+          name: pulvis-windows-arm64-v0.0.6
           path: ${{ env.PULVIS_TASK_ROOT }}/artifacts/*
           if-no-files-found: error
           retention-days: 30
@@ -177,6 +179,7 @@ jobs:
           node scripts/build-modules.mjs
           node scripts/verify-icons.mjs
           node scripts/package-smoke.mjs
+          node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){if(c.createHash('sha256').update(fs.readFileSync(f)).digest('hex')!==h)throw new Error('SHA-256 mismatch: '+f)}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
 
       - name: Build, verify and stage macOS Apple Silicon PKG plus SHA-256
         run: node scripts/build-macos-pkg.mjs --arch=arm64 "$PULVIS_TASK_ROOT/artifacts"
@@ -184,7 +187,7 @@ jobs:
       - name: Upload verified macOS Apple Silicon package
         uses: actions/upload-artifact@v4
         with:
-          name: pulvis-macos-arm64-v0.0.5
+          name: pulvis-macos-arm64-v0.0.6
           path: ${{ env.PULVIS_TASK_ROOT }}/artifacts/*
           if-no-files-found: error
           retention-days: 30
@@ -228,6 +231,7 @@ jobs:
           node scripts/build-modules.mjs
           node scripts/verify-icons.mjs
           node scripts/package-smoke.mjs
+          node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){if(c.createHash('sha256').update(fs.readFileSync(f)).digest('hex')!==h)throw new Error('SHA-256 mismatch: '+f)}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
 
       - name: Build, verify and stage macOS Intel PKG plus SHA-256
         run: node scripts/build-macos-pkg.mjs --arch=x64 "$PULVIS_TASK_ROOT/artifacts"
@@ -235,7 +239,7 @@ jobs:
       - name: Upload verified macOS Intel package
         uses: actions/upload-artifact@v4
         with:
-          name: pulvis-macos-x64-v0.0.5
+          name: pulvis-macos-x64-v0.0.6
           path: ${{ env.PULVIS_TASK_ROOT }}/artifacts/*
           if-no-files-found: error
           retention-days: 30
@@ -279,6 +283,7 @@ jobs:
           node scripts/build-modules.mjs
           node scripts/verify-icons.mjs
           node scripts/package-smoke.mjs
+          node -e "const fs=require('node:fs'),c=require('node:crypto'),m=JSON.parse(fs.readFileSync('_manifest.sha256.json','utf8'));for(const[f,h]of Object.entries(m.files)){if(c.createHash('sha256').update(fs.readFileSync(f)).digest('hex')!==h)throw new Error('SHA-256 mismatch: '+f)}console.log('Verified _manifest.sha256.json:',Object.keys(m.files).length,'files')"
 
       - name: Build, verify and stage Debian package plus SHA-256
         run: node scripts/build-linux-deb.mjs "$PULVIS_TASK_ROOT/artifacts"
@@ -286,7 +291,7 @@ jobs:
       - name: Upload verified Linux package
         uses: actions/upload-artifact@v4
         with:
-          name: pulvis-linux-x64-v0.0.5
+          name: pulvis-linux-x64-v0.0.6
           path: ${{ env.PULVIS_TASK_ROOT }}/artifacts/*
           if-no-files-found: error
           retention-days: 30
@@ -330,7 +335,7 @@ jobs:
       - name: Upload verified source archive
         uses: actions/upload-artifact@v4
         with:
-          name: pulvis-source-v0.0.5
+          name: pulvis-source-v0.0.6
           path: ${{ env.PULVIS_TASK_ROOT }}/artifacts/*
           if-no-files-found: error
           retention-days: 30
@@ -362,16 +367,16 @@ jobs:
       - name: Download all verified packages
         uses: actions/download-artifact@v4
         with:
-          path: ${{ runner.temp }}/pulvis-release-v0.0.5
+          path: ${{ runner.temp }}/pulvis-release-v0.0.6
           merge-multiple: true
 
       - name: Generate and verify SHA256SUMS.txt
-        run: node scripts/write-release-checksums.mjs "$RUNNER_TEMP/pulvis-release-v0.0.5"
+        run: node scripts/write-release-checksums.mjs "$RUNNER_TEMP/pulvis-release-v0.0.6"
 
       - name: Upload complete release bundle
         uses: actions/upload-artifact@v4
         with:
-          name: pulvis-release-v0.0.5
-          path: ${{ runner.temp }}/pulvis-release-v0.0.5/*
+          name: pulvis-release-v0.0.6
+          path: ${{ runner.temp }}/pulvis-release-v0.0.6/*
           if-no-files-found: error
           retention-days: 30
