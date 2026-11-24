@@ -23,6 +23,7 @@ const OWNED_FILES = [
     'README.ru.md',
     'LICENSE',
     'assets/pulvis-icon.png',
+    'assets/pulvis-header-en.png',
     'assets/pulvis-social-preview.png',
     'assets/pulvis-header-zh-CN.png',
     'assets/pulvis-header-ru.png',
@@ -198,6 +199,7 @@ function installTo(librariesDir) {
     const pluginDir = joinPath(librariesDir, LIBRARY_NAME);
     const legacyDir = joinPath(librariesDir, LEGACY_LIBRARY_NAME);
     const corePath = joinPath(dirname(librariesDir), 'csound/modules/GrainCore.txt');
+    const hostDemoPath = joinPath(dirname(librariesDir), 'patches/pulvis-demo.json');
     const hostIndexPath = joinPath(librariesDir, '_index.json');
     const moduleIndexPath = joinPath(pluginDir, '_index.json');
     const markerPath = joinPath(pluginDir, MIGRATION_MARKER);
@@ -239,6 +241,8 @@ function installTo(librariesDir) {
 
         backup(corePath);
         writeDataAtomic(corePath, readData(joinPath(PAYLOAD_ROOT, 'csound/GrainCore.txt')));
+        backup(hostDemoPath);
+        writeDataAtomic(hostDemoPath, readData(joinPath(PAYLOAD_ROOT, 'examples/pulvis-demo.json')));
 
         backup(moduleIndexPath);
         writeTextAtomic(moduleIndexPath, JSON.stringify({ modules: existingModules.concat(payloadIndex.modules) }, null, 2) + '\n');

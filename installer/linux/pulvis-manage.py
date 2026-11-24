@@ -29,6 +29,7 @@ OWNED_FILES = (
     "README.ru.md",
     "LICENSE",
     "assets/pulvis-icon.png",
+    "assets/pulvis-header-en.png",
     "assets/pulvis-social-preview.png",
     "assets/pulvis-header-zh-CN.png",
     "assets/pulvis-header-ru.png",
@@ -144,12 +145,30 @@ def remove_empty_dirs(path: Path, stop_at: Path) -> None:
         current = current.parent
 
 
+def verify_payload_integrity() -> None:
+    manifest_path = PAYLOAD_ROOT / "_manifest.sha256.json"
+    if not manifest_path.is_file():
+        return
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    files = manifest.get("files")
+    if manifest.get("algorithm") != "sha256" or not isinstance(files, dict):
+        raise RuntimeError("Integrity check failed: invalid _manifest.sha256.json. Installation aborted.")
+    for rel, expected in files.items():
+        candidate = PAYLOAD_ROOT / rel
+        if candidate.is_file():
+            actual = sha256_bytes(candidate.read_bytes())
+            if actual != expected:
+                raise RuntimeError(f"Integrity check failed: {rel} has been modified. Installation aborted.")
+
+
 def install_to(libraries_dir: Path) -> None:
+    verify_payload_integrity()
     if not is_libraries_dir(libraries_dir):
         raise RuntimeError(f"Invalid CsModular libraries folder: {libraries_dir}")
     plugin_dir = libraries_dir / LIBRARY_NAME
     legacy_dir = libraries_dir / LEGACY_LIBRARY_NAME
     core_path = libraries_dir.parent / "csound" / "modules" / "GrainCore.txt"
+    host_demo_path = libraries_dir.parent / "patches" / "pulvis-demo.json"
     host_index_path = libraries_dir / "_index.json"
     module_index_path = plugin_dir / "_index.json"
     marker_path = plugin_dir / MIGRATION_MARKER
@@ -203,6 +222,11 @@ def install_to(libraries_dir: Path) -> None:
         backup_file(core_path)
         write_atomic(core_path, core_data)
         hashes["__GrainCore__"] = sha256_bytes(core_data)
+
+        demo_data = (PAYLOAD_ROOT / "examples" / "pulvis-demo.json").read_bytes()
+        backup_file(host_demo_path)
+        write_atomic(host_demo_path, demo_data)
+        hashes["__HostDemo__"] = sha256_bytes(demo_data)
 
         merged_modules = {"modules": existing_modules + payload_index["modules"]}
         backup_file(module_index_path)

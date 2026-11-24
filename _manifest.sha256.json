@@ -1,0 +1,29 @@
+{
+  "version": "0.0.6",
+  "algorithm": "sha256",
+  "files": {
+    "csound/GrainCore.txt": "7e648901dd870be9e1d01bfbcbf22f1e411be4fb7459548fece53da02b9fb82e",
+    "modules/GrainFreeze.js": "e939a51cab6f035df1525e248b2fc0b4ec6c4886385ca7d457027562f3808ef2",
+    "modules/GrainFreeze.txt": "e127aa07b508fb75c5fcbacf610846cbe297c7f4fd10edc1f67f5e392d50d05c",
+    "modules/GrainSample.js": "e2fc522b289205f653caf13994ca635046a81e184da16d685c886ebb5f399a48",
+    "modules/GrainSample.txt": "4cc4a37ff60245cdbb57e3c070d059460f727572830cc276c084f53852df4743",
+    "modules/GrainOsc.js": "c6f0d3f94c13384ba14c2c730a482595a83b21e1c00ec4aaa2b1052c570f8825",
+    "modules/GrainOsc.txt": "397a7943ad76ace3719f6e3d33d41c52987c4fe2136d1b559cedac0685cb40cd",
+    "_index.json": "e73530493a2861a85c617a69288347e130a0b7402df6f1841d408dd3c37fe82c",
+    "_meta.json": "83878c3e25ea154a62c1f32e426fbd12845734b0c21bdfbe34db5ebfde3fa0c4",
+    "examples/pulvis-demo.json": "2e8cd817ad9944baf7618e6f1901fd21eac6b13867908904398017900efdbe74",
+    "integration/csmodular-poly.patch": "36bef5d83f7fd1fc390b28b37fd321325a8c86e2be94c7fca6181961f86af9fa",
+    "integration/csmodular.patch": "60b82be3edcd5ef10738c8f44d8a63dcf54a15f63476506059e0acbc6ea6b499",
+    "integration/display-menu.patch": "a06c936d11a855335ee614f8c0b6ab4c310adbc6d761b32244e333406ee97372",
+    "integration/engine-resync-poly.patch": "0a1035cd9996ee7ecd9089a30d52bb41033d8c85009af259dc2a6a5abb8ad4fa",
+    "integration/engine-resync-std.patch": "b7c742cd3e5f86ec87f5d2f1a53b65c0067bf02a035c886a63385204bb2a8716",
+    "integration/engine-settings-poly.patch": "e788f0b0cce5347d7a7ba7ccf0a516e998016134ad481e5b1b49b57a8f05b402",
+    "integration/engine-settings-std.patch": "e6a8fea1a9eac7ba7addc9181fc6cc632690b78ed223a4c4ab8620ea1f6ff5e2",
+    "integration/poly-routing-update.patch": "53fd49acbf95af59222db08298afc92b7f0c4d12b6b7a831fce72a0fe2f8c75b",
+    "integration/studio-display-update.patch": "619482189a1143bfbc42dca8b2d3bb4b71beaa631680e403ad9518a9e1360f24",
+    "integration/studio-live-update.patch": "2810856234b7de96115cbadf904851c3b176bef3424f5ec9cf0731a656a8365d",
+    "integration/studio-release-update.patch": "9ae4b1f9cd53a729701618432828afd05224df36103ce7c3f7540781a14cc21f",
+    "integration/studio-upgrade.patch": "9dc6212c5c94bd88f2a11d20f561df578c843a9d7ce1d979d5ca6abde56db222",
+    "integration/wav-session-compat.patch": "9835984ee86c03b45e16f696e8034f8e29b9a7a757531674b49e9649b79cb9f9"
+  }
+}

@@ -28,9 +28,9 @@ The repository contains two workflows:
 
 ## First release
 
-- Tag: `v0.0.5`
-- Release title: `Pulvis 0.0.5`
-- Release notes: copy the relevant language section from `release-notes/0.0.5.md`.
-- Attach: `Pulvis-0.0.5-windows-x64.exe`, `Pulvis-0.0.5-windows-arm64.exe`, `Pulvis-0.0.5-macos-arm64.pkg`, `Pulvis-0.0.5-macos-x64.pkg`, `Pulvis-0.0.5-linux-x64.deb`, `Pulvis-0.0.5-source.zip`, and `SHA256SUMS.txt`. The individual `.sha256` sidecars may also be attached.
+- Tag: `v0.0.6`
+- Release title: `Pulvis 0.0.6`
+- Release notes: copy the relevant language section from `release-notes/0.0.6.md`.
+- Attach: `Pulvis-0.0.6-windows-x64.exe`, `Pulvis-0.0.6-windows-arm64.exe`, `Pulvis-0.0.6-macos-arm64.pkg`, `Pulvis-0.0.6-macos-x64.pkg`, `Pulvis-0.0.6-linux-x64.deb`, `Pulvis-0.0.6-source.zip`, and `SHA256SUMS.txt`. The individual `.sha256` sidecars may also be attached.
 
 The README download URLs already point to these GitHub release asset names. Once the release exists, download each asset from GitHub and verify its SHA-256 against the uploaded manifest before sharing the links.

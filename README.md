@@ -23,32 +23,32 @@ First download and install the **CsModular 0.1.5** host. Click the image to open
 Close CsModular after installing the host, then choose the Pulvis installer for your system and processor.
 
 <p align="center">
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="Download Pulvis 0.0.5 · Windows x64"></a>
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe"><img src="assets/downloads/windows-arm64.png" width="231" alt="Download Pulvis 0.0.5 · Windows ARM64"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="Download Pulvis 0.0.6 · Windows x64"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-windows-arm64.exe"><img src="assets/downloads/windows-arm64.png" width="231" alt="Download Pulvis 0.0.6 · Windows ARM64"></a>
 </p>
 
 Run the `.exe` and select the `libraries/pulvis` folder in your CsModular installation. Choose x64 for Intel or AMD PCs, or ARM64 for Windows on Arm.
 
 <p align="center">
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg"><img src="assets/downloads/macos-arm64.png" width="231" alt="Download Pulvis 0.0.5 · macOS Apple Silicon"></a>
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg"><img src="assets/downloads/macos-x64.png" width="231" alt="Download Pulvis 0.0.5 · macOS Intel"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-macos-arm64.pkg"><img src="assets/downloads/macos-arm64.png" width="231" alt="Download Pulvis 0.0.6 · macOS Apple Silicon"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-macos-x64.pkg"><img src="assets/downloads/macos-x64.png" width="231" alt="Download Pulvis 0.0.6 · macOS Intel"></a>
 </p>
 
 Open the `.pkg` and follow the installer. Choose Apple Silicon for an M-series Mac or Intel for an Intel Mac.
 
 <p align="center">
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb"><img src="assets/downloads/linux-x64.png" width="231" alt="Download Pulvis 0.0.5 · Linux amd64 .deb"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-linux-x64.deb"><img src="assets/downloads/linux-x64.png" width="231" alt="Download Pulvis 0.0.6 · Linux amd64 .deb"></a>
 </p>
 
 On Debian or Ubuntu, run this command from the folder containing the download.
 
 ```sh
-sudo apt install ./Pulvis-0.0.5-linux-x64.deb
+sudo apt install ./Pulvis-0.0.6-linux-x64.deb
 ```
 
 Reopen CsModular and press **Space**. The module browser lists the three instruments under **Pulvis**.
 
-Pulvis 0.0.5 · [Source ZIP](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip) · [SHA-256 checksums](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt)
+Pulvis 0.0.6 · [Source ZIP](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-source.zip) · [SHA-256 checksums](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/SHA256SUMS.txt)
 
 <details>
 <summary>Custom paths, upgrades and removal</summary>
@@ -85,8 +85,9 @@ During playback, Grain Osc shows its carrier and output waveform, Grain Freeze s
 - **Language:** Switch all Pulvis panels and module menus between **English**, **简体中文**, **Русский**, or **System default** (saved on your device). The main CsModular module browser stays in English to match the host UI.
 - **Panel color:** Tint any Pulvis module with 32 color presets, or click **↺ Follow theme** to restore the default matte graphite look.
 - **About:** View Pulvis version, website, copyright, and MIT license.
+- **0.0.6 Upgraded Engine & Options:** Fully upgraded Csound granular DSP core (unified 128-slot branchless voice pool, precomputed Hann/Blackman window tables, instantaneous envelope overlap normalization, soft-knee feedback saturation, and up to `3.88×` faster Eco CPU tier). Right-click to configure pitch quantization (**Relative interval** or **Lock to key** with root & scale; per-slot **Sample root + fine detune** on Grain Sample), **Tempo sync** to host BPM (`1/1`–`1/32`), **Wet tone** (Grain Freeze wet-only tilt), and **CPU mode** (**Auto** by device, or manual Balanced / Eco / Studio HQ). Hold `Alt` and click any knob or readout to type an exact value.
 
-If your module menu lacks the spectrum command, check that your CsModular host includes the updated Pulvis panels. The published 0.0.5 desktop installers predate this menu change.
+If your module menu lacks the spectrum or engine commands, check that your CsModular host includes the updated 0.0.6 Pulvis host integration.
 
 ## Controls
 
@@ -101,7 +102,7 @@ Small jacks beside knobs and selectors accept additive control-rate CV modulatio
 | **Pitch st / Pitch (0=A3)** | Transposition (`−48` to `+48` semitones; `0 = 220 Hz` on Osc) | `+12` semitones |
 | **Pitch jitter** | Symmetric random pitch spread (`0–24` semitones) | `+12` semitones |
 | **Window** | Grain envelope shape: **Hann**, **Triangle**, or **Blackman** | `+2` |
-| **Direction** | **Forward** or **Reverse** grain playback | Reverse |
+| **Direction** *(Freeze / Sample)* | **Forward** or **Reverse** grain playback | Reverse |
 | **Pan / Pan spread** | Stereo placement (`L–R`) and random stereo width (`±0.5`) | Full span |
 | **Freeze / Hold pos. / Hold warp** | Freeze: **Record / Freeze** live buffer · Sample: **Follow / Hold** position & scan · Osc: **Follow / Hold** warp depth | Hold / Freeze |
 | **Time jitter %** | Irregular trigger timing (`0–100%`, up to `±45%` interval scatter at constant mean rate) | `+100%` |
@@ -112,7 +113,7 @@ Small jacks beside knobs and selectors accept additive control-rate CV modulatio
 | **Capture** *(Freeze)* | Copies current live ring into a private Freeze snapshot | — |
 | **Feedback** *(Freeze)* | Feeds wet grains back into recording (`0–0.95`, peak-limited to `±1`) | `+0.25` |
 | **Slot** *(Sample)* | Selects one of 8 session WAV slots (`#1`–`#8`) | — |
-| **Scan %/s** *(Sample)* | Automatic file traversal speed (`−100%` to `+100%` per second) | — |
+| **Scan %/s** *(Sample)* | Automatic file traversal speed (`−100%` to `+100%` per second) | `+100%/s` |
 | **Wave** *(Osc)* | Waveform selector: **Sine**, **Triangle**, **Saw**, **Square** | — |
 
 ## WAV Support & Good to Know

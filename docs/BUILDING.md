@@ -4,14 +4,15 @@ This page describes how Pulvis installers and the source archive are built, chec
 
 ## Source-checkout installation
 
-The [0.0.5 source archive](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip) includes the module generator and host integration patches. In the plugin checkout run:
+The [0.0.6 source archive](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-source.zip) includes the module generator and host integration patches. In the plugin checkout run:
 
 ```sh
 node scripts/build-modules.mjs
+node scripts/write-manifest.mjs
 node scripts/install.mjs <path-to-compatible-csmodular-host>
 ```
 
-For a locally maintained host with the audio engine, generator and panel integration already applied, the installer also accepts `--sync-assets` after the host path. It checks those integration files before refreshing the library, manuals, example and shared core.
+Before writing to the host, `scripts/install.mjs` (and the Windows/Linux desktop installer scripts) verifies all digests in `_manifest.sha256.json` and aborts if any tracked file has been modified or removed. For a locally maintained host with the audio engine, generator and panel integration already applied, the installer also accepts `--sync-assets` after the host path. It checks those integration files before refreshing the library, manuals, example and shared core.
 
 ## Local builds
 
@@ -41,7 +42,7 @@ npm run release:checksums
 The Windows commands require Inno Setup 7.1.1 and build separate native installers for Windows x64 (`ArchitecturesAllowed=x64os`) and Windows ARM64 (`ArchitecturesAllowed=arm64`). The macOS commands run on macOS (or GitHub Actions `macos-14`) using Apple's built-in `pkgbuild` and `productbuild` tools to produce native `.pkg` installers with no WebView or Rust runtime. The Debian command runs on Linux using `dpkg-deb` directly with no GTK, WebKit, or Tauri dependencies. The source archive is built from a committed revision with:
 
 ```sh
-node scripts/package-source.mjs <commit> release-assets/0.0.5
+node scripts/package-source.mjs <commit> release-assets/0.0.6
 ```
 
 By default, verified packages are written to `release-assets/<version>/`:

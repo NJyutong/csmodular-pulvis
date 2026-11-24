@@ -47,6 +47,16 @@ and HSL/RGB/hex panel color tinting with theme reset (`src/ui/ModuleContextMenu.
 authored directly for the Pulvis host integration patch (`integration/csmodular.patch`).
 No third-party UI assets, fonts, audio files, or demo WAV files are bundled.
 
+## Project introduction video for the site (2026-11-22)
+
+The site loads the user-provided Bilibili embed for `BV1MGyVzmEwb` only after a
+visitor clicks the hero button. Closing the dialog resets the iframe and stops
+playback. The site does not load or offer a download of the local MP4 source.
+
+## Pulvis 0.0.6 backend DSP engine upgrade (2026-11-24)
+
+The 0.0.6 backend engine rewrite in `csound/GrainCore.txt` (`CMGrainCoreExtended`) is an original Csound implementation authored directly for Pulvis: unified 128-slot branchless voice pool (`0..63` persistent active voices + `64..127` block-local expiring snapshots), precomputed 4097-point Hann and Blackman window lookup tables (`tablei` at `ksmps > 1` with exact analytic parity at `ksmps == 1`), instantaneous envelope-weight overlap normalization, piecewise $C^1$ zero-THD soft-knee feedback saturator, unified target-note pitch quantizer (Relative interval and Lock to key with carrier phase alignment), host BPM tempo sync (`chnget "bpm"`), wet-only Wet Tone spectral tilt filter for Grain Freeze, and 3-tier CPU modes (`Eco` / `Balanced` / `Studio HQ`). No Csound built-in granular opcodes and no third-party DSP code or audio assets are used.
+
 ## Host
 
 `E:/paper/csmodular-main` reports version 0.1.5. Its README says MIT and refers

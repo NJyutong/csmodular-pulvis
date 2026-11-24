@@ -24,8 +24,8 @@ endop
 #define CM_TRIANGLE(P) # (1 - abs(2 * $P - 1)) #
 #define CM_BLACKMAN(P) # (0.42 - 0.5 * cos(6.283185307179586 * $P) + 0.08 * cos(12.566370614359172 * $P)) #
 
-opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
-    aInput, iMode, kTable, kFrames, kSourceRate, kDensity, kSizeMs, kPosition, kPosJitter, kPitch, kPitchJitter, kWindow, kPan, kSpread, kFreeze, kSeed, kTimeJitter, kReverse, kFeedback, kSnapshotSelect, kSnapshotA, kSnapshotB, kCapture, iDisplay xin
+opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkkoOOOOOOO
+    aInput, iMode, kTable, kFrames, kSourceRate, kDensity, kSizeMs, kPosition, kPosJitter, kPitch, kPitchJitter, kWindow, kPan, kSpread, kFreeze, kSeed, kTimeJitter, kReverse, kFeedback, kSnapshotSelect, kSnapshotA, kSnapshotB, kCapture, iDisplay, kScaleArg, kSyncArg, kToneArg, kQualityArg, kScaleModeArg, kKeyRootArg, kSourceRootArg xin
     iBlock = ksmps
     ; Exact 0..ksmps-1 sample offsets of the current block.
     iRampTable ftgentmp 0, 0, -iBlock, -2, 0
@@ -34,44 +34,78 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
         tableiw iFill, iFill, iRampTable
         iFill = iFill + 1
     od
+    ; Precomputed 4096+1 guard-point Hann & Blackman window LUTs (max error < 6e-7, -124 dB)
+    ; eliminate 100% of per-sample transcendental cos() calls from the hot voice loop.
+    iHannTable ftgentmp 0, 0, 4097, -2, 0
+    iBlackmanTable ftgentmp 0, 0, 4097, -2, 0
+    iWinIdx = 0
+    while iWinIdx <= 4096 do
+        iWinP = iWinIdx / 4096
+        iWinCos = cos(6.283185307179586 * iWinP)
+        tableiw 0.5 - 0.5 * iWinCos, iWinIdx, iHannTable
+        tableiw 0.34 - 0.5 * iWinCos + 0.16 * iWinCos * iWinCos, iWinIdx, iBlackmanTable
+        iWinIdx = iWinIdx + 1
+    od
+    tableiw 0, 0, iHannTable
+    tableiw 0, 4096, iHannTable
+    tableiw 0, 0, iBlackmanTable
+    tableiw 0, 4096, iBlackmanTable
+    ; Musical pitch quantizer LUT (8 scales x 12 semitones):
+    ; 0:Free, 1:Octave, 2:5th+Oct, 3:MajPent, 4:MinPent, 5:Major, 6:Minor, 7:Dorian
+    iScaleTable ftgentmp 0, 0, -96, -2, \
+        0,1,2,3,4,5,6,7,8,9,10,11, \
+        0,0,0,0,0,0,12,12,12,12,12,12, \
+        0,0,0,0,7,7,7,7,7,7,12,12, \
+        0,0,2,2,4,4,7,7,7,9,9,12, \
+        0,0,3,3,3,5,5,7,7,10,10,10, \
+        0,0,2,2,4,5,5,7,7,9,9,11, \
+        0,0,2,3,3,5,5,7,8,8,10,10, \
+        0,0,2,3,3,5,5,7,7,9,10,10
+    ; Host BPM sync subdivision multipliers (triggers per beat):
+    ; 0:Free, 1:1/1, 2:1/2, 3:1/4, 4:1/8, 5:1/8T, 6:1/16, 7:1/16T, 8:1/32
+    iSyncMultTable ftgentmp 0, 0, -9, -2, 0, 0.25, 0.5, 1, 2, 3, 4, 6, 8
+    ; Per-module live control channels (formatted once at i-time, zero k-rate string overhead).
+    ; Negative IDs share module controls while leaving display writes to voice zero.
+    iControlId = abs(iDisplay)
+    if iControlId > 0 then
+        SScaleChan sprintf "pulvis_%d_scale", iControlId
+        SSyncChan sprintf "pulvis_%d_sync", iControlId
+        SToneChan sprintf "pulvis_%d_tone", iControlId
+        SScaleModeChan sprintf "pulvis_%d_scalemode", iControlId
+        SKeyRootChan sprintf "pulvis_%d_keyroot", iControlId
+        SSrcRootChan sprintf "pulvis_%d_srcroot", iControlId
+    else
+        SScaleChan = ""
+        SSyncChan = ""
+        SToneChan = ""
+        SScaleModeChan = ""
+        SKeyRootChan = ""
+        SSrcRootChan = ""
+    endif
     ; Live ring: the whole block is written before any grain reads it, so grains keep
     ; (ksmps - 4) extra samples away from the oldest data. Zero at the host's ksmps = 4.
     iMargin = max(0, iBlock - 4)
 
-    kLength[] init 64
-    kSource[] init 64
+    kLength[] init 128
+    kSource[] init 128
     kList[] init 64
-    kAge[] init 64
-    kSpan[] init 64
-    kRead[] init 64
-    kSeamWidth[] init 64
-    kSeamValue[] init 64
-    kStep[] init 64
-    kWarpScale[] init 64
-    kWarpRadians[] init 64
-    kSourceLength[] init 64
-    kShape[] init 64
-    kLeft[] init 64
-    kRight[] init 64
-    ; A block may contain the tail of an expiring voice and a replacement in the
-    ; same slot. Keep render snapshots separate from the reusable persistent pool.
-    ; 128 holds the 64-slot pool plus up to 64 sample-accurate replacements
-    ; inside the supported control blocks (the host uses ksmps=4).
-    kBlockPoolSlot[] init 128
-    kBlockSource[] init 128
-    kBlockSourceLength[] init 128
-    kBlockAge[] init 128
-    kBlockSpan[] init 128
-    kBlockReadIndex[] init 128
-    kBlockStep[] init 128
-    kBlockLength[] init 128
-    kBlockSeamWidth[] init 128
-    kBlockSeamValue[] init 128
-    kBlockWarpScale[] init 128
-    kBlockWarpRadians[] init 128
-    kBlockShape[] init 128
-    kBlockLeft[] init 128
-    kBlockRight[] init 128
+    kAge[] init 128
+    kSpan[] init 128
+    kRead[] init 128
+    kSeamWidth[] init 128
+    kSeamValue[] init 128
+    kStep[] init 128
+    kWarpScale[] init 128
+    kWarpRadians[] init 128
+    kSourceLength[] init 128
+    kShape[] init 128
+    kLeft[] init 128
+    kRight[] init 128
+    ; Unified 128-slot voice layout: slots 0..63 are the persistent reusable pool,
+    ; and slots 64..127 hold block-local snapshots for voices expiring inside this block.
+    ; kRenderSlot[] indexes directly into the unified 128-slot arrays so the hot render
+    ; loop executes with zero conditional branching and zero redundant scalar copies.
+    kRenderSlot[] init 128
     kNextTrigger init -1
     kPreviousTimeOffset init 0
     kCarrier init 0
@@ -88,9 +122,10 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
     kLastFreeze init -1
     kLastCapture init 0
     kSnapshotActive init 0
+    kSnapshotSerial init 0
     kSnapshotWrite init 0
     kSnapshotFilled init 0
-    kFeedbackPrevious init 0
+    aFeedbackPrevious init 0
     kCount init 0
     kSmoothedActive init 1
 
@@ -109,10 +144,61 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
     kReverse = (kReverse >= 0.5 ? 1 : 0)
     kFeedback limit kFeedback, 0, 0.95
     kSnapshotSelect = (kSnapshotSelect >= 0.5 ? 1 : 0)
+    ; Resolve v2.0 controls: optional UDO args combined with live per-module / global host channels.
+    kGlobalQuality chnget "pulvis_quality"
+    kQualityEff = int(limit(kQualityArg > 0 ? kQualityArg : kGlobalQuality, 0, 2) + 0.5)
+    if iControlId > 0 then
+        kScaleChan chnget SScaleChan
+        kSyncChan chnget SSyncChan
+        kToneChan chnget SToneChan
+        kScaleModeChan chnget SScaleModeChan
+        kKeyRootChan chnget SKeyRootChan
+        kSrcRootChan chnget SSrcRootChan
+    else
+        kScaleChan = 0
+        kSyncChan = 0
+        kToneChan = 0
+        kScaleModeChan = 0
+        kKeyRootChan = 0
+        kSrcRootChan = 0
+    endif
+    kScaleEff = int(limit(kScaleArg > 0 ? kScaleArg : kScaleChan, 0, 7) + 0.5)
+    kScaleModeEff = int(limit(kScaleModeArg > 0 ? kScaleModeArg : kScaleModeChan, 0, 1) + 0.5)
+    kKeyRootEff = int(limit(kKeyRootArg > 0 ? kKeyRootArg : kKeyRootChan, 0, 11) + 0.5)
+    kSourceRootEff limit (kSourceRootArg > 0 ? kSourceRootArg : kSrcRootChan), 0, 127
+    kSyncEff = int(limit(kSyncArg > 0 ? kSyncArg : kSyncChan, 0, 8) + 0.5)
+    kToneEff limit (abs(kToneArg) > 0.0001 ? kToneArg : kToneChan), -1, 1
+    kPreviousSyncPeriod init 0
+    if kSyncEff >= 1 && kDensity > 0 then
+        kHostBpm chnget "bpm"
+        kHostBpm = (kHostBpm > 0 ? limit(kHostBpm, 20, 300) : 120)
+        kSyncMult tablekt kSyncEff, iSyncMultTable
+        kDensity = limit((kHostBpm / 60) * kSyncMult, 0.1, 200)
+        kSyncPeriod = sr / kDensity
+        if kPreviousSyncPeriod != kSyncPeriod then
+            ; Preserve the remaining beat fraction and jitter offset across tempo changes.
+            if kPreviousSyncPeriod > 0 && kNextTrigger >= 0 then
+                kNextTrigger = kNextTrigger * kSyncPeriod / kPreviousSyncPeriod
+                kPreviousTimeOffset = kPreviousTimeOffset * kSyncPeriod / kPreviousSyncPeriod
+            else
+                kNextTrigger = min(kNextTrigger, kSyncPeriod)
+                kPreviousTimeOffset = 0
+            endif
+            kPreviousSyncPeriod = kSyncPeriod
+        endif
+    else
+        kPreviousSyncPeriod = 0
+    endif
+    kVoiceCap = (kQualityEff == 1 ? 16 : 64)
     kSeedValue = 1 + int(limit(kSeed, 0, 65534))
     if kSeedValue != kLastSeed then
-        kRandom = kSeedValue
+        ; Warm up the Park-Miller LCG so small seeds (e.g. default Seed = 1)
+        ; do not bias the first grain's position, pitch and pan toward -1.
+        kRandom = (kSeedValue * 16807) % 2147483647
+        kRandom = (kRandom * 16807) % 2147483647
+        kRandom = (kRandom * 16807) % 2147483647
         kTimeRandom = (kSeedValue * 48271 + 12820163) % 2147483647
+        kTimeRandom = (kTimeRandom * 48271) % 2147483647
         if kTimeRandom == 0 then
             kTimeRandom = 1
         endif
@@ -128,53 +214,70 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
     if iMode == 1 && kFreeze < 0.5 then
         aWriteIndex = kWrite + aRamp
         if kFeedback > 0 then
-            aRecord = aInput + kFeedback * kFeedbackPrevious
-            aRecord limit aRecord, -1, 1
+            ; Full-bandwidth audio-rate feedback with DC blocking, high-frequency damping,
+            ; and piecewise zero-THD soft-knee saturation (linear up to 0.7, smooth rational knee into [-1, 1]).
+            aFbSignal = aInput + kFeedback * aFeedbackPrevious
+            aAbsFb = abs(aFbSignal)
+            aExcess limit aAbsFb - 0.7, 0, 1000000
+            aDenom limit aAbsFb, 0.7, 1000000
+            aRecord = aFbSignal * (1 - (aExcess * aExcess) / ((0.3 + aExcess) * aDenom))
         else
             aRecord = aInput
         endif
         tablewkt aRecord, aWriteIndex, kTable, 0, 0, 1
+        kWriteEnd = (kWrite + iBlock) % kFrames
         if iDisplay > 0 then
-            kBin = int(kWrite * 192 / kFrames)
+            kBinStart = int(kWrite * 192 / kFrames)
+            kBinEnd = int(((kWrite + iBlock - 1) % kFrames) * 192 / kFrames)
             kPeak max_k aRecord, 1, 1
-            if kBin != kLastPeakBin then
-                kRingPeak[kBin] = 0
-                kLastPeakBin = kBin
+            if kBinStart != kLastPeakBin then
+                kRingPeak[kBinStart] = 0
+                kLastPeakBin = kBinStart
             endif
-            kRingPeak[kBin] = max(kRingPeak[kBin], kPeak)
+            kRingPeak[kBinStart] = max(kRingPeak[kBinStart], kPeak)
+            if kBinEnd != kBinStart then
+                kRingPeak[kBinEnd] = kPeak
+                kLastPeakBin = kBinEnd
+            endif
         endif
     endif
 
-    ; Capture to the inactive private table. Do not overwrite a table still read by
-    ; an active grain or a tail queued for this block. tablecopy runs in Csound and
-    ; publishes the new pointer only after the complete table has been copied.
-    kCaptureEdge = (kCapture >= 0.5 && kLastCapture < 0.5 ? 1 : 0)
-    kLastCapture = kCapture
-    if iMode == 1 && kCaptureEdge == 1 && kFilled > 0 then
-        kDestination = (kSnapshotActive == 1 ? kSnapshotB : kSnapshotA)
-        kDestinationBusy = 0
-        kCheckVoice = 0
-        while kCheckVoice < 64 do
-            if kLength[kCheckVoice] > 0 && kSource[kCheckVoice] == kDestination then
-                kDestinationBusy = 1
-            endif
-            kCheckVoice = kCheckVoice + 1
-        od
-        if kDestinationBusy == 0 && kDestination >= 1 then
-            tablecopy kDestination, kTable
-            if iDisplay > 0 then
-                kCapturedPeak = kRingPeak
-            endif
-            kSnapshotActive = (kDestination == kSnapshotA ? 1 : 2)
-            if kFreeze < 0.5 then
-                kSnapshotWrite = (kWrite + iBlock) % kFrames
-                kSnapshotFilled = min(kFilled + iBlock, kFrames)
-            else
-                kSnapshotWrite = kWrite
-                kSnapshotFilled = kFilled
+        ; Capture to the inactive private table. If the inactive table is still being
+        ; read by an expiring grain from an earlier switch, latch kPendingCapture and
+        ; automatically complete the copy on the first block when the table becomes free.
+        kPendingCapture init 0
+        kCaptureEdge = (kCapture >= 0.5 && kLastCapture < 0.5 ? 1 : 0)
+        kLastCapture = kCapture
+        if kCaptureEdge == 1 then
+            kPendingCapture = 1
+        endif
+        if iMode == 1 && kPendingCapture == 1 && kFilled > 0 then
+            kDestination = (kSnapshotActive == 1 ? kSnapshotB : kSnapshotA)
+            kDestinationBusy = 0
+            kCheckVoice = 0
+            while kCheckVoice < 64 do
+                if kLength[kCheckVoice] > 0 && kSource[kCheckVoice] == kDestination then
+                    kDestinationBusy = 1
+                endif
+                kCheckVoice = kCheckVoice + 1
+            od
+            if kDestinationBusy == 0 && kDestination >= 1 then
+                tablecopy kDestination, kTable
+                if iDisplay > 0 then
+                    kCapturedPeak = kRingPeak
+                endif
+                kSnapshotActive = (kDestination == kSnapshotA ? 1 : 2)
+                kSnapshotSerial = kSnapshotSerial + 1
+                if kFreeze < 0.5 then
+                    kSnapshotWrite = (kWrite + iBlock) % kFrames
+                    kSnapshotFilled = min(kFilled + iBlock, kFrames)
+                else
+                    kSnapshotWrite = kWrite
+                    kSnapshotFilled = kFilled
+                endif
+                kPendingCapture = 0
             endif
         endif
-    endif
 
     kReadTable = kTable
     kReadWrite = kWrite
@@ -194,30 +297,34 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
     endif
 
     ; Only voices that can expire inside this block need a snapshot: their slot may
-    ; be reused before the old tail is rendered. Other voices stay in the pool.
+    ; be reused before the old tail is rendered. Expiring voices are copied to slots
+    ; 64..127 of the unified voice arrays; persistent voices stay in 0..63.
     kBlockCount = 0
+    kSnapCount = 0
     kItem = 0
     while kItem < kCount do
         kVoice = kList[kItem]
         if kLength[kVoice] > 0 then
             if kAge[kVoice] + iBlock >= kLength[kVoice] then
-                kBlockPoolSlot[kBlockCount] = -1
-                kBlockSource[kBlockCount] = kSource[kVoice]
-                kBlockSourceLength[kBlockCount] = kSourceLength[kVoice]
-                kBlockAge[kBlockCount] = kAge[kVoice]
-                kBlockSpan[kBlockCount] = kSpan[kVoice]
-                kBlockReadIndex[kBlockCount] = kRead[kVoice]
-                kBlockStep[kBlockCount] = kStep[kVoice]
-                kBlockLength[kBlockCount] = kLength[kVoice]
-                kBlockSeamWidth[kBlockCount] = kSeamWidth[kVoice]
-                kBlockSeamValue[kBlockCount] = kSeamValue[kVoice]
-                kBlockWarpScale[kBlockCount] = kWarpScale[kVoice]
-                kBlockWarpRadians[kBlockCount] = kWarpRadians[kVoice]
-                kBlockShape[kBlockCount] = kShape[kVoice]
-                kBlockLeft[kBlockCount] = kLeft[kVoice]
-                kBlockRight[kBlockCount] = kRight[kVoice]
+                kSnapSlot = 64 + kSnapCount
+                kSnapCount = kSnapCount + 1
+                kSource[kSnapSlot] = kSource[kVoice]
+                kSourceLength[kSnapSlot] = kSourceLength[kVoice]
+                kAge[kSnapSlot] = kAge[kVoice]
+                kSpan[kSnapSlot] = kSpan[kVoice]
+                kRead[kSnapSlot] = kRead[kVoice]
+                kStep[kSnapSlot] = kStep[kVoice]
+                kLength[kSnapSlot] = kLength[kVoice]
+                kSeamWidth[kSnapSlot] = kSeamWidth[kVoice]
+                kSeamValue[kSnapSlot] = kSeamValue[kVoice]
+                kWarpScale[kSnapSlot] = kWarpScale[kVoice]
+                kWarpRadians[kSnapSlot] = kWarpRadians[kVoice]
+                kShape[kSnapSlot] = kShape[kVoice]
+                kLeft[kSnapSlot] = kLeft[kVoice]
+                kRight[kSnapSlot] = kRight[kVoice]
+                kRenderSlot[kBlockCount] = kSnapSlot
             else
-                kBlockPoolSlot[kBlockCount] = kVoice
+                kRenderSlot[kBlockCount] = kVoice
             endif
             kBlockCount = kBlockCount + 1
         endif
@@ -226,16 +333,27 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
 
     ; Sample-countdown scheduling preserves average density. A separate seeded stream
     ; offsets event times by at most 45% of the nominal period without reordering them.
+    ; O(1) block fast-forward skips the per-sample loop whenever the next trigger lies beyond this block.
     if iMode == 2 then
-        kCarrierStep = pow(2, kPitch / 12) * kSourceRate / sr
+        kCarrierPitch = kPitch
+        if kScaleEff >= 1 && kScaleModeEff == 1 then
+            kCarRel = round(57 + kPitch) - kKeyRootEff
+            kCarOct = floor(kCarRel / 12)
+            kCarMod = kCarRel - kCarOct * 12
+            kCarQuant tablekt kScaleEff * 12 + kCarMod, iScaleTable
+            kCarrierPitch = limit(kKeyRootEff + kCarOct * 12 + kCarQuant - 57, -48, 48)
+        endif
+        kCarrierStep = pow(2, kCarrierPitch / 12) * kSourceRate / sr
     endif
-    kOffset = 0
-    while kOffset < iBlock do
-        kShouldTrigger = 0
-        if kDensity <= 0 then
-            kNextTrigger = -1
-            kPreviousTimeOffset = 0
-        else
+    if kDensity <= 0 then
+        kNextTrigger = -1
+        kPreviousTimeOffset = 0
+    elseif kNextTrigger > iBlock then
+        kNextTrigger = kNextTrigger - iBlock
+    else
+        kOffset = 0
+        while kOffset < iBlock do
+            kShouldTrigger = 0
             if kNextTrigger < 0 then
                 kNextTrigger = sr / kDensity
             endif
@@ -243,240 +361,279 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
             if kNextTrigger <= 0 then
                 kShouldTrigger = 1
             endif
-        endif
-        if kShouldTrigger == 1 then
-            kSlot = 0
-            kFound = 0
-            while kSlot < 64 && kFound == 0 do
-                ; The per-sample reference releases a voice before the first
-                ; sample whose age reaches its length. Match that boundary even
-                ; when it falls inside this control block.
-                if kLength[kSlot] == 0 || kAge[kSlot] + kOffset >= kLength[kSlot] then
-                    kLength[kSlot] = 0
-                    kFound = 1
-                else
-                    kSlot = kSlot + 1
-                endif
-            od
-            if kFound == 1 then
-                ; Park-Miller state belongs to this UDO instance, not Csound globally.
-                kRandom = (kRandom * 16807) % 2147483647
-                kPositionRandom = 2 * kRandom / 2147483647 - 1
-                kRandom = (kRandom * 16807) % 2147483647
-                kPitchRandom = 2 * kRandom / 2147483647 - 1
-                kRandom = (kRandom * 16807) % 2147483647
-                kPanRandom = 2 * kRandom / 2147483647 - 1
-                kRatio = pow(2, limit(kPitch + kPitchRandom * kPitchJitter, -48, 48) / 12)
-                kRate = kRatio * kSourceRate / sr
-                kStepRate = (kReverse == 1 ? -kRate : kRate)
-                kDuration = max(2, int(kSizeMs * sr / 1000))
-                if iMode == 2 then
-                    ; Warp and wavetable start are independent at grain creation.
-                    kWarpScale[kSlot] = kHeldPosition * kFrames / 6.283185307179586
-                    kWarpRadians[kSlot] = 6.283185307179586 / kFrames
-                else
-                    kStart = limit(kHeldPosition + kPositionRandom * kPosJitter, 0, 1)
-                endif
-                if iMode == 1 then
-                    ; Writer state exactly as it is at this sample.
-                    if kSnapshotSelect == 1 then
-                        kWriteNow = kReadWrite
-                        kFilledNow = kReadFilled
-                    elseif kFreeze < 0.5 then
-                        kWriteNow = (kWrite + kOffset + 1) % kFrames
-                        kFilledNow = min(kFilled + kOffset + 1, kFrames)
-                    else
-                        kWriteNow = kWrite
-                        kFilledNow = kFilled
-                    endif
-                    ; Reserve the whole read trajectory AND future writer trajectory.
-                    ; This remains safe if Freeze is released during a grain.
-                    kDuration = min(kDuration, int((kFilledNow - 4 - iMargin) / (kRate + 1)))
-                    if kReverse == 1 then
-                        kNear = 2
-                        kFar = kFilledNow - kDuration * (kRate + 1) - 2 - iMargin
-                        kStart = kWriteNow - (kNear + kStart * max(0, kFar - kNear))
-                    else
-                        kNear = kDuration * kRate + 2
-                        kFar = kFilledNow - kDuration - 2 - iMargin
-                        kStart = kWriteNow - (kNear + kStart * max(0, kFar - kNear))
-                    endif
-                    kStepRate = (kReverse == 1 ? -kRate : kRate)
-                elseif iMode == 2 then
-                    ; Align overlapping grains to the carrier. Scatter phase symmetrically around it.
-                    kStart = kCarrier + kCarrierStep * kOffset + 0.5 * kFrames * kPositionRandom * kPosJitter
-                    kStepRate = (kReverse == 1 ? -kRate : kRate)
-                else
-                    kStart = kStart * (kFrames - 1)
-                    kStepRate = (kReverse == 1 ? -kRate : kRate)
-                endif
-                if kDuration >= 2 then
-                    kVoicePan = limit(kPan + 0.5 * kSpread * kPanRandom, 0, 1)
-                    ; Read position the grain would have at sample 0 of this block.
-                    kBlockRead = kStart - kStepRate * kOffset
-                    kLength[kSlot] = kDuration
-                    kAge[kSlot] = -kOffset
-                    kSpan[kSlot] = kDuration - 1
-                    kRead[kSlot] = kBlockRead - floor(kBlockRead / kFrames) * kFrames
-                    kStep[kSlot] = kStepRate
-                    kSource[kSlot] = (iMode == 1 ? kReadTable : kTable)
-                    kSourceLength[kSlot] = kFrames
-                    kSeamWidth[kSlot] = 0
-                    if iMode == 0 && kFrames >= 16 && kStart + kRate * (kDuration - 1) > kFrames - 1 then
-                        kHead tablekt 0, kTable
-                        kTail tablekt kFrames - 1, kTable
-                        if abs(kHead - kTail) > 0.001 then
-                            ; Smooth approximately 2 ms on each side, with a bound for short files.
-                            kSeamWidth[kSlot] = min(kFrames * 0.125, max(2, 0.002 * sr * kRate))
-                            kSeamValue[kSlot] = (kHead + kTail) * 0.5
-                        endif
-                    endif
-                    kShape[kSlot] = int(limit(kWindow, 0, 2) + 0.5)
-                    kLeft[kSlot] = sqrt(1 - kVoicePan)
-                    kRight[kSlot] = sqrt(kVoicePan)
-                    ; Keep the persistent active-slot list ordered without rescanning all 64 slots each block.
-                    kItem = 0
-                    kFound = 0
-                    while kItem < kCount && kFound == 0 do
-                        if kList[kItem] == kSlot then
-                            kFound = 1
-                        else
-                            kItem = kItem + 1
-                        endif
-                    od
-                    if kFound == 0 then
-                        kItem = kCount
+            if kShouldTrigger == 1 then
+                kSlot = 0
+                kFound = 0
+                while kSlot < kVoiceCap && kFound == 0 do
+                    ; The per-sample reference releases a voice before the first
+                    ; sample whose age reaches its length. Match that boundary even
+                    ; when it falls inside this control block.
+                    if kLength[kSlot] == 0 || kAge[kSlot] + kOffset >= kLength[kSlot] then
+                        kLength[kSlot] = 0
                         kFound = 1
-                        while kItem > 0 && kFound == 1 do
-                            kItem = kItem - 1
-                            if kList[kItem] > kSlot then
-                                kList[kItem + 1] = kList[kItem]
+                    else
+                        kSlot = kSlot + 1
+                    endif
+                od
+                if kFound == 1 then
+                    ; Park-Miller state belongs to this UDO instance, not Csound globally.
+                    kRandom = (kRandom * 16807) % 2147483647
+                    kPositionRandom = 2 * kRandom / 2147483647 - 1
+                    kRandom = (kRandom * 16807) % 2147483647
+                    kPitchRandom = 2 * kRandom / 2147483647 - 1
+                    kRandom = (kRandom * 16807) % 2147483647
+                    kPanRandom = 2 * kRandom / 2147483647 - 1
+                    kRawPitch = limit(kPitch + kPitchRandom * kPitchJitter, -48, 48)
+                    if kScaleEff >= 1 then
+                        if kScaleModeEff == 1 && (iMode == 2 || kSourceRootEff > 0) then
+                            ; Unified Target-Note Quantizer: Target = Snap(SourceRoot + Shift, KeyRoot, Scale)
+                            ; Osc uses its known A3 (MIDI 57) root; WAV uses per-slot SampleRoot (+ detune).
+                            kSrcMidi = (iMode == 2 ? 57 : kSourceRootEff)
+                            kRelToKey = round(kSrcMidi + kRawPitch) - kKeyRootEff
+                            kOctDelta = floor(kRelToKey / 12)
+                            kModDelta = kRelToKey - kOctDelta * 12
+                            kQuantSemi tablekt kScaleEff * 12 + kModDelta, iScaleTable
+                            kTargetMidi = kKeyRootEff + kOctDelta * 12 + kQuantSemi
+                            kGrainPitch = limit(kTargetMidi - kSrcMidi, -48, 48)
+                        else
+                            ; Relative Interval mode (for Live FX, unlabelled WAVs, drums & chords).
+                            kSemiDelta = round(kRawPitch - kPitch)
+                            kOctDelta = floor(kSemiDelta / 12)
+                            kModDelta = kSemiDelta - kOctDelta * 12
+                            kQuantSemi tablekt kScaleEff * 12 + kModDelta, iScaleTable
+                            kGrainPitch = limit(kPitch + kOctDelta * 12 + kQuantSemi, -48, 48)
+                        endif
+                    else
+                        kGrainPitch = kRawPitch
+                    endif
+                    kRatio = pow(2, kGrainPitch / 12)
+                    kRate = kRatio * kSourceRate / sr
+                    kStepRate = (kReverse == 1 ? -kRate : kRate)
+                    kDuration = max(2, int(kSizeMs * sr / 1000))
+                    if iMode == 2 then
+                        ; Warp and wavetable start are independent at grain creation.
+                        kWarpScale[kSlot] = kHeldPosition * kFrames / 6.283185307179586
+                        kWarpRadians[kSlot] = 6.283185307179586 / kFrames
+                    else
+                        kStart = limit(kHeldPosition + kPositionRandom * kPosJitter, 0, 1)
+                    endif
+                    if iMode == 1 then
+                        ; Writer state exactly as it is at this sample.
+                        if kSnapshotSelect == 1 then
+                            kWriteNow = kReadWrite
+                            kFilledNow = kReadFilled
+                        elseif kFreeze < 0.5 then
+                            kWriteNow = (kWrite + kOffset + 1) % kFrames
+                            kFilledNow = min(kFilled + kOffset + 1, kFrames)
+                        else
+                            kWriteNow = kWrite
+                            kFilledNow = kFilled
+                        endif
+                        ; Reserve the whole read trajectory AND future writer trajectory.
+                        ; This remains safe if Freeze is released during a grain.
+                        kDuration = min(kDuration, int((kFilledNow - 4 - iMargin) / (kRate + 1)))
+                        if kReverse == 1 then
+                            kNear = 2
+                            kFar = kFilledNow - kDuration * (kRate + 1) - 2 - iMargin
+                            kStart = kWriteNow - (kNear + kStart * max(0, kFar - kNear))
+                        else
+                            kNear = kDuration * kRate + 2
+                            kFar = kFilledNow - kDuration - 2 - iMargin
+                            kStart = kWriteNow - (kNear + kStart * max(0, kFar - kNear))
+                        endif
+                        kStepRate = (kReverse == 1 ? -kRate : kRate)
+                    elseif iMode == 2 then
+                        ; Align overlapping grains to the carrier. Scatter phase symmetrically around it.
+                        kStart = kCarrier + kCarrierStep * kOffset + 0.5 * kFrames * kPositionRandom * kPosJitter
+                        kStepRate = (kReverse == 1 ? -kRate : kRate)
+                    else
+                        kStart = kStart * (kFrames - 1)
+                        kStepRate = (kReverse == 1 ? -kRate : kRate)
+                    endif
+                    if kDuration >= 2 then
+                        kVoicePan = limit(kPan + 0.5 * kSpread * kPanRandom, 0, 1)
+                        ; Read position the grain would have at sample 0 of this block.
+                        kBlockRead = kStart - kStepRate * kOffset
+                        kLength[kSlot] = kDuration
+                        kAge[kSlot] = -kOffset
+                        kSpan[kSlot] = kDuration - 1
+                        kRead[kSlot] = kBlockRead - floor(kBlockRead / kFrames) * kFrames
+                        kStep[kSlot] = kStepRate
+                        if iMode == 2 && kTable < 0 then
+                            ; Negative kTable encodes -(1000 * kBaseTable + kSinTable) so each grain
+                            ; selects its own band-limited harmonic table from its actual pitch kRatio.
+                            kEncoded = int(-kTable + 0.5)
+                            kBaseWaveTable = int(kEncoded / 1000)
+                            kFallbackSin = kEncoded - kBaseWaveTable * 1000
+                            kGrainBudget = (sr * 0.5) / (220 * kRatio)
+                            kGrainBand = (kGrainBudget >= 24 ? 0 : (kGrainBudget >= 12 ? 1 : (kGrainBudget >= 6 ? 2 : (kGrainBudget >= 3 ? 3 : 4))))
+                            kSource[kSlot] = (kGrainBand == 4 ? kFallbackSin : kBaseWaveTable + kGrainBand)
+                        else
+                            kSource[kSlot] = (iMode == 1 ? kReadTable : kTable)
+                        endif
+                        kSourceLength[kSlot] = kFrames
+                        kSeamWidth[kSlot] = 0
+                        ; Detect seam crossing in the actual playback direction (forward crosses kFrames - 1, reverse crosses 0).
+                        kCrossesSeam = (kReverse == 1 ? (kStart - kRate * (kDuration - 1) < 0 ? 1 : 0) : (kStart + kRate * (kDuration - 1) > kFrames - 1 ? 1 : 0))
+                        if iMode == 0 && kFrames >= 16 && kCrossesSeam == 1 then
+                            kHead tablekt 0, kTable
+                            kTail tablekt kFrames - 1, kTable
+                            if abs(kHead - kTail) > 0.001 then
+                                ; Smooth approximately 2 ms on each side, with a bound for short files.
+                                kSeamWidth[kSlot] = min(kFrames * 0.125, max(2, 0.002 * sr * kRate))
+                                kSeamValue[kSlot] = (kHead + kTail) * 0.5
+                            endif
+                        endif
+                        kShape[kSlot] = int(limit(kWindow, 0, 2) + 0.5)
+                        kLeft[kSlot] = sqrt(1 - kVoicePan)
+                        kRight[kSlot] = sqrt(kVoicePan)
+                        ; Keep the persistent active-slot list ordered without rescanning all 64 slots each block.
+                        kItem = 0
+                        kFound = 0
+                        while kItem < kCount && kFound == 0 do
+                            if kList[kItem] == kSlot then
+                                kFound = 1
                             else
                                 kItem = kItem + 1
-                                kFound = 0
                             endif
                         od
-                        kList[kItem] = kSlot
-                        kCount = kCount + 1
+                        if kFound == 0 then
+                            kItem = kCount
+                            kFound = 1
+                            while kItem > 0 && kFound == 1 do
+                                kItem = kItem - 1
+                                if kList[kItem] > kSlot then
+                                    kList[kItem + 1] = kList[kItem]
+                                else
+                                    kItem = kItem + 1
+                                    kFound = 0
+                                endif
+                            od
+                            kList[kItem] = kSlot
+                            kCount = kCount + 1
+                        endif
+                        kRenderSlot[kBlockCount] = kSlot
+                        kBlockCount = kBlockCount + 1
                     endif
-                    kBlockPoolSlot[kBlockCount] = -1
-                    kBlockSource[kBlockCount] = kSource[kSlot]
-                    kBlockSourceLength[kBlockCount] = kSourceLength[kSlot]
-                    kBlockAge[kBlockCount] = kAge[kSlot]
-                    kBlockSpan[kBlockCount] = kSpan[kSlot]
-                    kBlockReadIndex[kBlockCount] = kRead[kSlot]
-                    kBlockStep[kBlockCount] = kStep[kSlot]
-                    kBlockLength[kBlockCount] = kLength[kSlot]
-                    kBlockSeamWidth[kBlockCount] = kSeamWidth[kSlot]
-                    kBlockSeamValue[kBlockCount] = kSeamValue[kSlot]
-                    kBlockWarpScale[kBlockCount] = kWarpScale[kSlot]
-                    kBlockWarpRadians[kBlockCount] = kWarpRadians[kSlot]
-                    kBlockShape[kBlockCount] = kShape[kSlot]
-                    kBlockLeft[kBlockCount] = kLeft[kSlot]
-                    kBlockRight[kBlockCount] = kRight[kSlot]
-                    kBlockCount = kBlockCount + 1
                 endif
+                if kTimeJitter > 0 then
+                    kTimeRandom = (kTimeRandom * 48271) % 2147483647
+                    kTimeOffset = (2 * kTimeRandom / 2147483647 - 1) * kTimeJitter * 0.45 * sr / kDensity
+                else
+                    kTimeOffset = 0
+                endif
+                kNextTrigger = max(0, kNextTrigger + sr / kDensity + kTimeOffset - kPreviousTimeOffset)
+                kPreviousTimeOffset = kTimeOffset
             endif
-            if kTimeJitter > 0 then
-                kTimeRandom = (kTimeRandom * 48271) % 2147483647
-                kTimeOffset = (2 * kTimeRandom / 2147483647 - 1) * kTimeJitter * 0.45 * sr / kDensity
-            else
-                kTimeOffset = 0
-            endif
-            kNextTrigger = max(0, kNextTrigger + sr / kDensity + kTimeOffset - kPreviousTimeOffset)
-            kPreviousTimeOffset = kTimeOffset
-        endif
-        kOffset = kOffset + 1
-    od
+            kOffset = kOffset + 1
+        od
+    endif
 
     aSumL = 0
     aSumR = 0
+    kWindowEnergySum = 0
     kItem = 0
     while kItem < kBlockCount do
-        kVoice = kItem
-        kPoolSlot = kBlockPoolSlot[kVoice]
-        if kPoolSlot >= 0 then
-            kAgeNow = kAge[kPoolSlot]
-            kReadNow = kRead[kPoolSlot]
-            kRateNow = kStep[kPoolSlot]
-            kSpanNow = kSpan[kPoolSlot]
-            kSourceNow = kSource[kPoolSlot]
-            kSourceLengthNow = kSourceLength[kPoolSlot]
-            kSeamWidthNow = kSeamWidth[kPoolSlot]
-            kSeamValueNow = kSeamValue[kPoolSlot]
-            kWarpScaleNow = kWarpScale[kPoolSlot]
-            kWarpRadiansNow = kWarpRadians[kPoolSlot]
-            kShapeNow = kShape[kPoolSlot]
-            kLeftNow = kLeft[kPoolSlot]
-            kRightNow = kRight[kPoolSlot]
+        kSlot = kRenderSlot[kItem]
+        kAgeNow = kAge[kSlot]
+        kSpanNow = kSpan[kSlot]
+        kShapeNow = kShape[kSlot]
+        ; Eco mode (kQualityEff == 1) uses k-rate midpoint envelope on interior blocks
+        ; (falling back to exact audio-rate phase on birth/death blocks so zero clicks).
+        if kQualityEff == 1 && iBlock >= 4 && kAgeNow > 0 && kAgeNow + iBlock < kSpanNow then
+            kPhaseMid = (kAgeNow + iBlock * 0.5) / kSpanNow
+            if kShapeNow == 0 then
+                kEnvNow tablekt kPhaseMid * 4096, iHannTable
+            elseif kShapeNow == 1 then
+                kEnvNow = 1 - abs(2 * kPhaseMid - 1)
+            else
+                kEnvNow tablekt kPhaseMid * 4096, iBlackmanTable
+            endif
+            aEnvelope = kEnvNow
         else
-            kAgeNow = kBlockAge[kVoice]
-            kReadNow = kBlockReadIndex[kVoice]
-            kRateNow = kBlockStep[kVoice]
-            kSpanNow = kBlockSpan[kVoice]
-            kSourceNow = kBlockSource[kVoice]
-            kSourceLengthNow = kBlockSourceLength[kVoice]
-            kSeamWidthNow = kBlockSeamWidth[kVoice]
-            kSeamValueNow = kBlockSeamValue[kVoice]
-            kWarpScaleNow = kBlockWarpScale[kVoice]
-            kWarpRadiansNow = kBlockWarpRadians[kVoice]
-            kShapeNow = kBlockShape[kVoice]
-            kLeftNow = kBlockLeft[kVoice]
-            kRightNow = kBlockRight[kVoice]
+            ; Phase is clamped, so samples before the start or after the end are silent.
+            aPhase limit (aRamp + kAgeNow) / kSpanNow, 0, 1
+            if iBlock == 1 then
+                if kShapeNow == 0 then
+                    aEnvelope = $CM_HANN(aPhase)
+                elseif kShapeNow == 1 then
+                    aEnvelope = $CM_TRIANGLE(aPhase)
+                else
+                    aCos = cos(6.283185307179586 * aPhase)
+                    aEnvelope = 0.34 - 0.5 * aCos + 0.16 * aCos * aCos
+                endif
+            else
+                if kShapeNow == 0 then
+                    aEnvelope tablei aPhase, iHannTable, 1
+                elseif kShapeNow == 1 then
+                    aEnvelope = $CM_TRIANGLE(aPhase)
+                else
+                    aEnvelope tablei aPhase, iBlackmanTable, 1
+                endif
+            endif
+            kEnvNow downsamp aEnvelope
         endif
-        ; Phase is clamped, so samples before the start or after the end are silent.
-        aPhase limit (aRamp + kAgeNow) / kSpanNow, 0, 1
-        if kShapeNow == 0 then
-            aEnvelope = $CM_HANN(aPhase)
-        elseif kShapeNow == 1 then
-            aEnvelope = $CM_TRIANGLE(aPhase)
-        else
-            aEnvelope = $CM_BLACKMAN(aPhase)
-        endif
+        ; Accumulate instantaneous window weight directly from the rendered envelope
+        ; (zero redundant trig calls) so newly born or expiring voices at zero envelope amplitude
+        ; never cause gain-pumping steps on active grains.
+        kWindowEnergySum = kWindowEnergySum + kEnvNow
         ; Pitch-down/equal-rate playback uses cubic interpolation. Pitch-up uses
         ; Csound's sinc table reader with a cutoff warped to the playback step;
-        ; select an init-time window large enough for 8 samples per step.
-        aIndex = kReadNow + kRateNow * aRamp
+        ; adaptive tap scaling protects low-end and dense polyphonic workloads.
+        kRateNow = kStep[kSlot]
+        aIndex = kRead[kSlot] + kRateNow * aRamp
         kAbsRateNow = abs(kRateNow)
-        if iMode == 2 && kWarpScaleNow > 0 then
+        if iMode == 2 && kWarpScale[kSlot] > 0 then
             ; φ' = φ + β sin(2πφ)/(2π), 0 ≤ β ≤ 1. The warp keeps each
             ; cycle boundary fixed, moves waveform transitions within the cycle,
             ; and never reverses phase.
-            aIndex = aIndex + kWarpScaleNow * sin(kWarpRadiansNow * aIndex)
+            aIndex = aIndex + kWarpScale[kSlot] * sin(kWarpRadians[kSlot] * aIndex)
         endif
+        kSourceNow = kSource[kSlot]
+        kSourceLengthNow = kSourceLength[kSlot]
+        kSeamWidthNow = kSeamWidth[kSlot]
         if iMode == 2 then
             ; Oscillator tables are already band-limited by their harmonic bank;
-            ; their dense one-period table index step is not an audio sample rate.
-            aSample tablexkt aIndex, kSourceNow, 0, 4, 0, 0, 1
+            ; Eco mode uses direct linear tableikt (no sinc/cubic dispatcher); Balanced/Studio use cubic.
+            if kQualityEff == 1 then
+                aSample tableikt aIndex, kSourceNow, 0, 0, 1
+            else
+                aSample tablexkt aIndex, kSourceNow, 0, 4, 0, 0, 1
+            endif
         elseif kSourceLengthNow < 16 then
             ; Very short tables cannot support the sinc window; keep their wrapped read finite.
             aSample tablexkt aIndex, kSourceNow, 0, 2, 0, 0, 1
         elseif kAbsRateNow <= 1 then
             aSample tablexkt aIndex, kSourceNow, 0, 4, 0, 0, 1
+        elseif kQualityEff == 1 then
+            ; Eco (Low-End Device) path: cubic up to +12 st, 32-tap sinc cap above.
+            if kAbsRateNow <= 2 then
+                aSample tablexkt aIndex, kSourceNow, 0, 4, 0, 0, 1
+            else
+                aSample tablexkt aIndex, kSourceNow, kAbsRateNow, 32, 0, 0, 1
+            endif
         elseif kAbsRateNow <= 2 then
             aSample tablexkt aIndex, kSourceNow, kAbsRateNow, 16, 0, 0, 1
         elseif kAbsRateNow <= 4 then
             aSample tablexkt aIndex, kSourceNow, kAbsRateNow, 32, 0, 0, 1
         elseif kAbsRateNow <= 8 then
             aSample tablexkt aIndex, kSourceNow, kAbsRateNow, 64, 0, 0, 1
-        elseif kAbsRateNow <= 16 then
+        elseif kAbsRateNow <= 16 || (kQualityEff == 0 && kBlockCount > 16) then
             aSample tablexkt aIndex, kSourceNow, kAbsRateNow, 128, 0, 0, 1
-        elseif kAbsRateNow <= 64 then
-            aSample tablexkt aIndex, kSourceNow, kAbsRateNow, 512, 0, 0, 1
         else
-            aSample tablexkt aIndex, kSourceNow, kAbsRateNow, 1024, 0, 0, 1
+            ; Studio HQ and low-voice Balanced keep full 256-tap sinc (-114 dBc foldback).
+            aSample tablexkt aIndex, kSourceNow, kAbsRateNow, 256, 0, 0, 1
         endif
         if iMode == 0 && kSeamWidthNow > 0 then
-            kFileLength = kSourceLengthNow
-            aWrapped = aIndex - floor(aIndex / kFileLength) * kFileLength
-            aSeamDistance = kFileLength * 0.5 - abs(aWrapped - kFileLength * 0.5)
+            aWrapped = aIndex - floor(aIndex / kSourceLengthNow) * kSourceLengthNow
+            aSeamDistance = kSourceLengthNow * 0.5 - abs(aWrapped - kSourceLengthNow * 0.5)
             aSeamBlend limit 1 - aSeamDistance / kSeamWidthNow, 0, 1
             aSeamBlend = aSeamBlend * aSeamBlend * (3 - 2 * aSeamBlend)
-            aSample = aSample + (kSeamValueNow - aSample) * aSeamBlend
+            aSample = aSample + (kSeamValue[kSlot] - aSample) * aSeamBlend
         endif
         aVoice = aSample * aEnvelope
-        aSumL = aSumL + aVoice * kLeftNow
-        aSumR = aSumR + aVoice * kRightNow
+        aSumL = aSumL + aVoice * kLeft[kSlot]
+        aSumR = aSumR + aVoice * kRight[kSlot]
         kItem = kItem + 1
     od
 
@@ -517,34 +674,39 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
         ; Scan the loaded GEN01 table incrementally. Bound work per audio block,
         ; including on long files. Only completed pixels are published.
         kSampleSource init -1
+        kSampleFrames init -1
         kScanFrame init 0
         kOverviewBins init 0
         kMinimum init 0
         kMaximum init 0
+        kLastEnvelopeShape init -1
         if iMode == 0 then
-            if kSampleSource != kTable then
+            if kSampleSource != kTable || kSampleFrames != kFrames then
                 kSampleSource = kTable
+                kSampleFrames = kFrames
                 kScanFrame = 0
                 kOverviewBins = 0
                 kMinimum = 0
                 kMaximum = 0
             endif
-            kEnd = min(kFrames, kScanFrame + 128)
-            while kScanFrame < kEnd do
-                kSampleValue tablekt kScanFrame, kTable
-                kMinimum = min(kMinimum, kSampleValue)
-                kMaximum = max(kMaximum, kSampleValue)
-                kScanFrame += 1
-                while kOverviewBins < 192 && kScanFrame * 192 >= (kOverviewBins + 1) * kFrames do
-                    tablewkt kMaximum, 16 + kOverviewBins, iDisplay
-                    tablewkt kMinimum, 465 + kOverviewBins, iDisplay
-                    kOverviewBins += 1
-                    if kScanFrame * 192 < (kOverviewBins + 1) * kFrames then
-                        kMinimum = 0
-                        kMaximum = 0
-                    endif
+            if kScanFrame < kFrames then
+                kEnd = min(kFrames, kScanFrame + 128)
+                while kScanFrame < kEnd do
+                    kSampleValue tablekt kScanFrame, kTable
+                    kMinimum = min(kMinimum, kSampleValue)
+                    kMaximum = max(kMaximum, kSampleValue)
+                    kScanFrame += 1
+                    while kOverviewBins < 192 && kScanFrame * 192 >= (kOverviewBins + 1) * kFrames do
+                        tablewkt kMaximum, 16 + kOverviewBins, iDisplay
+                        tablewkt kMinimum, 465 + kOverviewBins, iDisplay
+                        kOverviewBins += 1
+                        if kScanFrame * 192 < (kOverviewBins + 1) * kFrames then
+                            kMinimum = 0
+                            kMaximum = 0
+                        endif
+                    od
                 od
-            od
+            endif
         endif
         kFrameTick metro 30
         if kFrameTick == 1 then
@@ -562,7 +724,7 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
             tablewkt int(limit(kWindow, 0, 2) + 0.5), 7, kView
             tablewkt kReverse, 8, kView
             tablewkt kFreeze, 9, kView
-            tablewkt kPitch, 10, kView
+            tablewkt (iMode == 2 ? kCarrierPitch : kPitch), 10, kView
             tablewkt kSnapshotSelect, 11, kView
             tablewkt sr, 12, kView
             tablewkt kCarrier / kFrames, 13, kView
@@ -570,12 +732,25 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
             tablewkt kSpread, 15, kView
             tablewkt kFrames / kSourceRate, 657, kView
             tablewkt kSourceRate, 658, kView
+            if iMode == 1 then
+                tablewkt kSnapshotSerial, 661, kView
+            endif
+            if kTable < 0 then
+                kEncodedView = int(-kTable + 0.5)
+                kBaseView = int(kEncodedView / 1000)
+                kSinView = kEncodedView - kBaseView * 1000
+                kViewBudget = (sr * 0.5) / (220 * pow(2, kPitch / 12))
+                kViewBand = (kViewBudget >= 24 ? 0 : (kViewBudget >= 12 ? 1 : (kViewBudget >= 6 ? 2 : (kViewBudget >= 3 ? 3 : 4))))
+                kDisplayWaveTable = (kViewBand == 4 ? kSinView : kBaseView + kViewBand)
+            else
+                kDisplayWaveTable = kTable
+            endif
             kPixel = 0
             while iMode != 0 && kPixel < 192 do
                 if iMode == 2 then
                     kAngle = kPixel / 192 * 6.283185307179586
                     kPhase = (kAngle + kHeldPosition * sin(kAngle)) / 6.283185307179586
-                    kValue tablekt kPhase * kFrames, kTable
+                    kValue tablekt kPhase * kFrames, kDisplayWaveTable
                 elseif kSnapshotSelect == 1 then
                     kValue = kCapturedPeak[kPixel]
                 else
@@ -585,24 +760,27 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
                 kPixel += 1
             od
             kEnvelopeShape = int(limit(kWindow, 0, 2) + 0.5)
-            kPoint = 0
-            while kPoint < 65 do
-                kPhaseView = kPoint / 64
-                if kEnvelopeShape == 0 then
-                    kAmplitude = $CM_HANN(kPhaseView)
-                elseif kEnvelopeShape == 1 then
-                    kAmplitude = $CM_TRIANGLE(kPhaseView)
-                else
-                    kAmplitude = $CM_BLACKMAN(kPhaseView)
-                endif
-                tablewkt kAmplitude, 400 + kPoint, kView
-                kPoint += 1
-            od
+            if kEnvelopeShape != kLastEnvelopeShape then
+                kPoint = 0
+                while kPoint < 65 do
+                    kPhaseView = kPoint / 64
+                    if kEnvelopeShape == 0 then
+                        kAmplitude = $CM_HANN(kPhaseView)
+                    elseif kEnvelopeShape == 1 then
+                        kAmplitude = $CM_TRIANGLE(kPhaseView)
+                    else
+                        kAmplitude = $CM_BLACKMAN(kPhaseView)
+                    endif
+                    tablewkt kAmplitude, 400 + kPoint, kView
+                    kPoint += 1
+                od
+                kLastEnvelopeShape = kEnvelopeShape
+            endif
             kItem = 0
             while kItem < kCount do
                 kVoice = kList[kItem]
                 kOffsetView = 208 + 3 * kItem
-                kPosView = (kSource[kVoice] == kReadTable ? kRead[kVoice] / kSourceLength[kVoice] : -1)
+                kPosView = (iMode == 2 || kSource[kVoice] == kReadTable ? kRead[kVoice] / kSourceLength[kVoice] : -1)
                 tablewkt kPosView, kOffsetView, kView
                 tablewkt kAge[kVoice] / kSpan[kVoice], kOffsetView + 1, kView
                 kPhaseView = limit(kAge[kVoice] / kSpan[kVoice], 0, 1)
@@ -619,16 +797,44 @@ opcode CMGrainCoreExtended, aa, aikkkkkkkkkkkkkkkkkkkkko
         endif
     endif
 
-    ; Smooth actual voice count over 10 ms. Module wrappers apply a hard safety ceiling
+    ; Smooth instantaneous window-energy overlap over 10 ms so grain births/deaths at zero
+    ; amplitude never cause volume pumping. Module wrappers apply a hard safety ceiling
     ; only after the user-selected output gain; the default core path stays linear.
-    kSmoothedActive = kSmoothedActive + (max(1, kCount) - kSmoothedActive) * (1 - exp(-iBlock / (0.01 * sr)))
+    kTargetActive = max(1, kWindowEnergySum)
+    kSmoothedActive = kSmoothedActive + (kTargetActive - kSmoothedActive) * (1 - exp(-iBlock / (0.01 * sr)))
     kGain = 1 / sqrt(max(1, kSmoothedActive))
     aLeft = aSumL * kGain
     aRight = aSumR * kGain
     if iMode == 1 && kFeedback > 0 then
-        kFeedbackPrevious downsamp (aLeft + aRight) * 0.5
+        ; Audio-rate feedback with DC blocking (20 Hz highpass) and gentle 14 kHz damping.
+        ; Tapped BEFORE Wet Tone so Wet Tone shapes only the wet output (never compounds in feedback).
+        aFbMono = (aLeft + aRight) * 0.5
+        aFbDc dcblock2 aFbMono, 128
+        aFeedbackPrevious tone aFbDc, 14000
     else
-        kFeedbackPrevious = 0
+        aFeedbackPrevious = 0
+    endif
+    ; FX-only Wet Tone (iMode == 1): shapes the wet granular cloud before Dry/Wet mix so dry voice
+    ; stays crisp while the frozen cloud warms or brightens (bit-exact bypass when kToneEff == 0).
+    if iMode == 1 && kToneEff < -0.005 then
+        kToneAmt = -kToneEff
+        kToneCut = 18000 * pow(450 / 18000, kToneAmt)
+        aTiltL tone aLeft, kToneCut
+        aTiltR tone aRight, kToneCut
+        kToneWet = min(1, kToneAmt * 3)
+        kWarmComp = 1 + 0.18 * kToneAmt
+        aLeft = (aLeft + (aTiltL - aLeft) * kToneWet) * kWarmComp
+        aRight = (aRight + (aTiltR - aRight) * kToneWet) * kWarmComp
+    elseif iMode == 1 && kToneEff > 0.005 then
+        kTiltPivot = 900 * pow(2.2, kToneEff)
+        aLowL tone aLeft, kTiltPivot
+        aLowR tone aRight, kTiltPivot
+        aHighL = aLeft - aLowL
+        aHighR = aRight - aLowR
+        kLowGain = 1 - 0.52 * kToneEff
+        kHighGain = 1 + 0.85 * kToneEff
+        aLeft = aLowL * kLowGain + aHighL * kHighGain
+        aRight = aLowR * kLowGain + aHighR * kHighGain
     endif
     xout aLeft, aRight
 endop

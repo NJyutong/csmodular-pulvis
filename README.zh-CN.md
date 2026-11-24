@@ -23,32 +23,32 @@
 宿主安装完成后，请关闭 CsModular，再选择下方对应系统与处理器的 Pulvis 安装包。
 
 <p align="center">
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="下载 Pulvis 0.0.5 · Windows x64"></a>
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe"><img src="assets/downloads/windows-arm64.png" width="231" alt="下载 Pulvis 0.0.5 · Windows ARM64"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="下载 Pulvis 0.0.6 · Windows x64"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-windows-arm64.exe"><img src="assets/downloads/windows-arm64.png" width="231" alt="下载 Pulvis 0.0.6 · Windows ARM64"></a>
 </p>
 
 Intel 或 AMD 电脑选 x64，Arm 电脑选 ARM64。运行 `.exe`，在安装向导中选择 CsModular 下的 `libraries/pulvis` 文件夹。
 
 <p align="center">
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg"><img src="assets/downloads/macos-arm64.png" width="231" alt="下载 Pulvis 0.0.5 · macOS Apple Silicon"></a>
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg"><img src="assets/downloads/macos-x64.png" width="231" alt="下载 Pulvis 0.0.5 · macOS Intel"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-macos-arm64.pkg"><img src="assets/downloads/macos-arm64.png" width="231" alt="下载 Pulvis 0.0.6 · macOS Apple Silicon"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-macos-x64.pkg"><img src="assets/downloads/macos-x64.png" width="231" alt="下载 Pulvis 0.0.6 · macOS Intel"></a>
 </p>
 
 M 系列芯片的 Mac 选 Apple Silicon，Intel 芯片的 Mac 选 Intel。打开 `.pkg`，按安装器提示完成安装。
 
 <p align="center">
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb"><img src="assets/downloads/linux-x64.png" width="231" alt="下载 Pulvis 0.0.5 · Linux amd64 .deb"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-linux-x64.deb"><img src="assets/downloads/linux-x64.png" width="231" alt="下载 Pulvis 0.0.6 · Linux amd64 .deb"></a>
 </p>
 
 在 Debian 或 Ubuntu 上，进入下载文件所在目录，运行以下命令。
 
 ```sh
-sudo apt install ./Pulvis-0.0.5-linux-x64.deb
+sudo apt install ./Pulvis-0.0.6-linux-x64.deb
 ```
 
 重新打开 CsModular，按**空格键**打开模块浏览器，即可在 **Pulvis** 下找到三个模块。
 
-Pulvis 0.0.5 · [源码 ZIP](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip) · [SHA-256 校验值](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt)
+Pulvis 0.0.6 · [源码 ZIP](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-source.zip) · [SHA-256 校验值](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/SHA256SUMS.txt)
 
 <details>
 <summary>自定义路径、旧版升级与卸载</summary>
@@ -85,8 +85,9 @@ Pulvis 0.0.5 · [源码 ZIP](https://github.com/NJyutong/csmodular-pulvis/releas
 - **语言：** 一键切换所有微粒面板与模块菜单为 **简体中文**、**Русский**、**English** 或 **跟随系统**（偏好保存在本机）。宿主主模块浏览器保持英文以与宿主界面一致。
 - **面板颜色：** 提供 32 种哑光配色自定义模块外观，点击 **↺ 跟随主题** 即可立即恢复默认深灰配色。
 - **关于：** 查看插件版本、项目网址、版权与 MIT 许可证。
+- **0.0.6 底层引擎全面升级与右键扩展：** 后端 Csound 颗粒合成核心已全面升级（统一 128 槽位无分支声部池、预计算汉宁/布莱克曼窗查表、瞬时包络权重归一化、零谐波软膝反馈限幅，以及省电 Eco 档最高 `3.88×` 提速）。右键菜单支持音高量化（**相对音程**或**锁定到调**主音与音阶；颗粒采样支持按槽设置**采样原音与微调**）、宿主 **节拍同步**（`1/1`–`1/32`）、颗粒冻结独有的 **湿声音色**，以及 **性能模式**（默认按设备硬件 **自动** 选档，亦可手动切换均衡 / 省电 Eco / 录音室 HQ）。按住 `Alt` 点击旋钮或数值框可直接键盘输入精确数值。
 
-如果右键菜单里找不到频谱选项，请确认 CsModular 宿主已包含新版 Pulvis 面板。已发布的 0.0.5 桌面安装包早于这次菜单调整。
+如果右键菜单里找不到频谱或引擎扩展选项，请确认 CsModular 宿主已更新至 0.0.6 对应的 Pulvis 宿主集成。
 
 ## 参数说明
 
@@ -101,7 +102,7 @@ Pulvis 0.0.5 · [源码 ZIP](https://github.com/NJyutong/csmodular-pulvis/releas
 | **音高（半音） / 音高（0=A3）** | 移调范围 `−48` 至 `+48` 半音（振荡器 `0 = 220 Hz`） | `+12` 半音 |
 | **音高抖动 st** | 每颗粒对称随机音高偏移（`0–24` 半音） | `+12` 半音 |
 | **颗粒包络** | 颗粒窗函数：**汉宁窗**、**三角窗** 或 **布莱克曼窗** | `+2` |
-| **播放方向** | **正向** 或 **反向** 播放颗粒 | 反向 |
+| **播放方向** *（冻结 / 采样）* | **正向** 或 **反向** 播放颗粒 | 反向 |
 | **声像 / 声像扩展** | 左右声像定位与随机立体声展宽（最大 `±0.5`） | 满行程 |
 | **冻结 / 锁定位置 / 锁定扭曲** | 冻结：**录入 / 冻结** 环形缓冲 · 采样：**跟随 / 锁定** 位置与扫描 · 振荡器：**跟随 / 锁定** 扭曲深度 | 冻结 / 锁定 |
 | **时间散布 %** | 触发时刻随机化（`0–100%`，最多偏移 `±45%` 间隔且平均粒速不变） | `+100%` |
@@ -112,7 +113,7 @@ Pulvis 0.0.5 · [源码 ZIP](https://github.com/NJyutong/csmodular-pulvis/releas
 | **捕捉快照** *（颗粒冻结）* | 将当前实时缓冲复制为该模块私有快照 | — |
 | **反馈** *（颗粒冻结）* | 录音时将湿声颗粒回送缓冲（`0–0.95`，峰值限制在 `±1`） | `+0.25` |
 | **采样槽** *（颗粒采样）* | 选择 1–8 号会话 WAV 采样槽 | — |
-| **扫描 %/秒** *（颗粒采样）* | 自动遍历采样文件的速度（每秒 `−100%` 至 `+100%`） | — |
+| **扫描 %/秒** *（颗粒采样）* | 自动遍历采样文件的速度（每秒 `−100%` 至 `+100%`） | `+100%/秒` |
 | **波形** *（颗粒振荡器）* | 选择内置波形：**正弦**、**三角**、**锯齿**、**方波** | — |
 
 ## WAV 支持与使用提示

@@ -1,4 +1,4 @@
-# Pulvis 0.0.5: CsModular Host Integration
+# Pulvis 0.0.6: CsModular Host Integration
 
 This guide describes how this repository integrates the Grain Freeze, Grain Sample, and Grain Osc modules with the CsModular host. It follows the host architecture and module-contribution conventions while documenting the implementation in this plugin checkout.
 
@@ -14,8 +14,10 @@ The Pulvis library follows that model:
 - modules/GrainSample.js and modules/GrainSample.txt — WAV-backed module; installed under public/libraries/pulvis/modules/.
 - modules/GrainOsc.js and modules/GrainOsc.txt — oscillator-backed module; installed under public/libraries/pulvis/modules/.
 - _index.json and _meta.json — module and library metadata; installed under public/libraries/pulvis/.
+- _manifest.sha256.json — SHA-256 integrity manifest verified before installation; regenerated via `node scripts/write-manifest.mjs`.
 - csound/GrainCore.txt — shared grain engine; installed as public/csound/modules/GrainCore.txt.
 - examples/pulvis-demo.json — example host patch; installed as public/patches/pulvis-demo.json.
+- integration/csmodular-poly.patch — integration for upstream `d749239` (polyphonic host). The source installer checks both baselines before applying a patch.
 - integration/csmodular.patch — host-side loader, sample, UI, localization, and build integration; applied to the host checkout.
 
 The JavaScript files describe controls, ports, and editor presentation. Grain scheduling and audio processing do not run in JavaScript or Rust.
@@ -34,7 +36,7 @@ The host integration also enables HiDPI supersampled canvas rendering (`main.js`
 
 ## 2. Signal flow and host routing
 
-The host's Voice layer runs in instr 1; its FX layer runs in instr 2. Patches connect module ports through the host's Zak cable buses. The plugin does not add another instrument or a private inter-module audio bus.
+On upstream `d749239`, Voice runs in instruments 100 and above, one per host voice. Each voice uses its own routed Zak buses. Voice zero receives the positive display table ID and supplies the panel display. Other voices receive its negative ID and read the same module control channels. FX runs once in instrument 2. After each compile, the host writes the module channels and global quality setting using the newly allocated display map. Patch JSON stores module options in `pulvisSettings`, including WAV roots and cents for each slot. The earlier host runs Voice in instrument 1. Patches connect module ports through the host's Zak cable buses. The plugin does not add another instrument or a private inter-module audio bus.
 
 Each Pulvis wrapper:
 
@@ -55,7 +57,16 @@ csound/GrainCore.txt is the single source of the plugin's shared grain algorithm
 
 The host integration resolves required UDO files from public/csound/modules/, orders dependencies before their callers, and includes a shared dependency once. Missing files and dependency cycles must be reported as generation errors. Sample-table declarations are emitted before the UDOs when a patch contains Grain Sample.
 
-The core owns a 64-slot voice pool per module instance. It advances grain scheduling sample by sample, then renders each control block using audio-rate vector operations. A grain that starts partway through a block retains its sample offset, so its start and end remain sample-accurate. When all slots are active, new triggers are dropped; active grains are not stolen.
+The 0.0.6 shared core (`CMGrainCoreExtended` in `csound/GrainCore.txt`) is a ground-up upgrade of the original Csound granular engine:
+
+- **Unified 128-slot branchless voice pool:** Slots `0..63` hold persistent active voices while slots `64..127` hold block-local expiring snapshots, keeping grain starts and ends sample-accurate across arbitrary host `ksmps` without voice stealing (when all 64 persistent slots are full, new triggers are dropped).
+- **Precomputed 4097-point Hann & Blackman window LUTs:** Replaces per-sample `cos()` evaluation in the hot render loop with linear-interpolated table lookups (`tablei`) at `ksmps > 1`, retaining exact analytic formulas at `ksmps == 1` for bit-exact reference parity.
+- **Instantaneous envelope-weight overlap normalization:** Divides the wet sum by the square root of smoothed overlap weight. Coherent grains still add in phase, so their output level rises with density.
+- **Piecewise $C^1$ zero-THD soft-knee feedback saturator:** Remains bit-exact linear for `|x| <= 0.7` and transitions smoothly into `±1` without hard-clipping artifacts in Grain Freeze feedback loops.
+- **Unified Target-Note Quantizer:** Supports both **Relative interval** (`Free`, `Octaves`, `Octaves + 5ths`, `Maj Pent`, `Min Pent`) and **Lock to key** (`C`–`B` + `Major`, `Natural Minor`, `Maj Pent`, `Min Pent`, `Dorian`). `GrainOsc` quantizes from its known `A3` root with phase-coherent carrier alignment; `GrainSample` applies per-slot `Sample root + fine detune (±50 c)`; `GrainFreeze` stays in Relative interval mode.
+- **Host BPM Tempo Sync:** Reads CsModular's `bpm` channel (`1/1`–`1/32`, including triplets) with instant subdivision switching (`kNextTrigger` clamping) while preserving `TimeJitter` humanization.
+- **Grain Freeze Wet Tone:** Constant-loudness wet-only spectral tilt filter placed strictly after the feedback tap and before the Dry/Wet mix so dry audio stays crisp and feedback never compounds tonal tilt.
+- **3-tier CPU Mode (`Balanced` / `Eco` / `Studio HQ`):** Defaults to frontend `Auto` hardware detection. `Eco` mode caps active voices at 16, switches `GrainOsc` to a `tableikt` fast path, caps sinc interpolation at 32 taps, and evaluates interior envelopes at k-rate midpoint (up to `3.88×` faster on extreme `+48 st` workloads).
 
 The plugin must implement scheduling, voice lifetime, table reads, interpolation, playback phase, windows, random state, overlap mixing, and live-ring-buffer behavior in its own Csound source. Do not call or wrap Csound's built-in granular opcodes, including partikkel, partikkelsync, grain, grain2, grain3, syncgrain, granule, diskgrain, fof, fof2, fog, sndwarp, sndwarpst, mincer, or temposcal.
 
@@ -87,11 +98,11 @@ The plugin targets the CsModular 0.1.5 source layout. Run the installer from the
 
     node scripts/install.mjs E:/paper/csmodular-main
 
-For a host carrying the earlier WAV session integration, the source installer applies `integration/wav-session-compat.patch` and checks that the resulting integration matches the current patch. For a clean baseline it applies `integration/csmodular.patch`. It stages the payload, then copies the ready-to-use modules, metadata, manuals, license, shared core and demo patch into the host.
+For a host carrying the earlier WAV session integration, the source installer applies `integration/wav-session-compat.patch` and checks that the resulting integration matches the current patch. For a clean baseline it applies `integration/csmodular.patch`. Before touching the host checkout, both `scripts/install.mjs` and the desktop installer scripts verify every file listed in `_manifest.sha256.json` and abort immediately if the manifest is missing or any byte has been modified. Once verified, the installer stages the payload and copies the ready-to-use modules, metadata, manuals, license, shared core and demo patch into the host.
 
 ### Desktop application packages
 
-Pulvis 0.0.5 provides standard native installers with no WebView, GTK, or WebKit runtime dependencies: separate Windows x64 (`Pulvis-0.0.5-windows-x64.exe`) and Windows ARM64 (`Pulvis-0.0.5-windows-arm64.exe`) Inno Setup wizards, separate macOS Apple Silicon (`Pulvis-0.0.5-macos-arm64.pkg`) and macOS Intel (`Pulvis-0.0.5-macos-x64.pkg`) native `.pkg` installers, and a standard Linux amd64 Debian `.deb` (`Pulvis-0.0.5-linux-x64.deb`). Each installer writes module files into the host's `libraries/pulvis` directory, places `GrainCore.txt` in the sibling `csound/modules/` directory, and registers `pulvis` in `libraries/_index.json`. All desktop installers require the host integration to be present already.
+Pulvis 0.0.6 provides standard native installers with no WebView, GTK, or WebKit runtime dependencies: separate Windows x64 (`Pulvis-0.0.6-windows-x64.exe`) and Windows ARM64 (`Pulvis-0.0.6-windows-arm64.exe`) Inno Setup wizards, separate macOS Apple Silicon (`Pulvis-0.0.6-macos-arm64.pkg`) and macOS Intel (`Pulvis-0.0.6-macos-x64.pkg`) native `.pkg` installers, and a standard Linux amd64 Debian `.deb` (`Pulvis-0.0.6-linux-x64.deb`). Each installer writes module files into the host's `libraries/pulvis` directory, places `GrainCore.txt` in the sibling `csound/modules/` directory, and registers `pulvis` in `libraries/_index.json`. All desktop installers require the host integration to be present already.
 
 The selected host must include the Pulvis-compatible loader, sample-import, and build integration. The desktop installer registers `pulvis` in `libraries/_index.json`; old `granular` registrations and folders are migrated. The command-line installer applies the integration to supported source checkouts. The desktop installer detects common host locations and provides a folder picker for source checkouts or custom paths. Its interface supports English, Simplified Chinese, and Russian and follows the system language unless a language is selected manually. The selected host directory must be writable by the installer.
 

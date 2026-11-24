@@ -6,7 +6,7 @@
       "library": "pulvis",
       "id": 1,
       "type": 0,
-      "parameters": "[0,24,80,0,0,0,0,0,64,64,0,0,-12,1,0,0,0]",
+      "parameters": "[0,24,80,0,0,0,0,0,64,64,0,0,-12,1,0,0]",
       "modes": [],
       "area": "VOICE",
       "hpos": 1,
@@ -32,7 +32,7 @@
       "modes": [],
       "area": "VOICE",
       "hpos": 27,
-      "vpos": 22
+      "vpos": 24
     },
     {
       "name": "GrainSample",

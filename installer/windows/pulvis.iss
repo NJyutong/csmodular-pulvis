@@ -53,59 +53,59 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 [CustomMessages]
 english.ProductName=Pulvis
 english.WelcomeTitle=Pulvis for CsModular
-english.WelcomeText=Install Pulvis for CsModular. Pulvis Grain Freeze, Pulvis Grain Sample, and Pulvis Grain Osc keep the same controls and sound engine.%n%nPulvis 0.0.5 installs in the selected CsModular library folder.
+english.WelcomeText=Install Pulvis for CsModular. Pulvis Grain Freeze, Pulvis Grain Sample, and Pulvis Grain Osc keep the same controls and sound engine.%n%nPulvis 0.0.6 installs in the selected CsModular library folder.
 english.SelectDirTitle=Choose the Pulvis library folder
-english.SelectDirText=Pulvis 0.0.5 will be installed in the selected library folder.
+english.SelectDirText=Pulvis 0.0.6 will be installed in the selected library folder.
 english.WriteFailed=Could not update the selected library. Close CsModular and check the folder permissions and free disk space.
 english.InvalidTarget=Select the CsModular libraries\pulvis folder. Its parent _index.json must contain a libraries list.
 english.ReadyTitle=Ready to install Pulvis
 english.FinishedTitle=Pulvis is ready
-english.FinishedText=Pulvis 0.0.5 has been installed. Restart CsModular to load the modules.
+english.FinishedText=Pulvis 0.0.6 has been installed. Restart CsModular to load the modules.
 
 chinesesimp.ProductName=微粒
 chinesesimp.WelcomeTitle=为 CsModular 安装微粒
-chinesesimp.WelcomeText=为 CsModular 安装微粒。微粒 · 颗粒冻结、微粒 · 颗粒采样和微粒 · 颗粒振荡器保留原有控制项与声音引擎。%n%n微粒 0.0.5 将安装到所选的 CsModular 库文件夹。
+chinesesimp.WelcomeText=为 CsModular 安装微粒。微粒 · 颗粒冻结、微粒 · 颗粒采样和微粒 · 颗粒振荡器保留原有控制项与声音引擎。%n%n微粒 0.0.6 将安装到所选的 CsModular 库文件夹。
 chinesesimp.SelectDirTitle=选择 Pulvis 库文件夹
-chinesesimp.SelectDirText=微粒 0.0.5 将安装到所选的插件库文件夹。
+chinesesimp.SelectDirText=微粒 0.0.6 将安装到所选的插件库文件夹。
 chinesesimp.WriteFailed=无法更新所选模块库。请关闭 CsModular，检查目录写入权限和可用磁盘空间。
 chinesesimp.InvalidTarget=请选择 CsModular 的 libraries\pulvis 文件夹；其上级 _index.json 必须包含 libraries 列表。
 chinesesimp.ReadyTitle=准备安装微粒
 chinesesimp.FinishedTitle=微粒已就绪
-chinesesimp.FinishedText=微粒 0.0.5 已安装。请重新启动 CsModular 以加载模块。
+chinesesimp.FinishedText=微粒 0.0.6 已安装。请重新启动 CsModular 以加载模块。
 
 russian.ProductName=Пульвис
 russian.WelcomeTitle=Установка Пульвиса для CsModular
-russian.WelcomeText=Установите Пульвис для CsModular. Модули «Пульвис · Гранулярная заморозка», «Пульвис · Гранулярный сэмпл» и «Пульвис · Гранулярный осциллятор» сохраняют прежние элементы управления и звуковой движок.%n%nПульвис 0.0.5 будет установлен в выбранную папку библиотеки CsModular.
+russian.WelcomeText=Установите Пульвис для CsModular. Модули «Пульвис · Гранулярная заморозка», «Пульвис · Гранулярный сэмпл» и «Пульвис · Гранулярный осциллятор» сохраняют прежние элементы управления и звуковой движок.%n%nПульвис 0.0.6 будет установлен в выбранную папку библиотеки CsModular.
 russian.SelectDirTitle=Выберите папку библиотеки Pulvis
-russian.SelectDirText=Пульвис 0.0.5 будет установлен в выбранную папку библиотеки.
+russian.SelectDirText=Пульвис 0.0.6 будет установлен в выбранную папку библиотеки.
 russian.WriteFailed=Не удалось обновить выбранную библиотеку. Закройте CsModular и проверьте права на запись и свободное место.
 russian.InvalidTarget=Выберите папку CsModular libraries\pulvis. В её родительском _index.json должен быть список libraries.
 russian.ReadyTitle=Готово к установке Пульвиса
 russian.FinishedTitle=Пульвис готов
-russian.FinishedText=Пульвис 0.0.5 установлен. Перезапустите CsModular, чтобы загрузить модули.
+russian.FinishedText=Пульвис 0.0.6 установлен. Перезапустите CsModular, чтобы загрузить модули.
 
 [Messages]
 english.WelcomeLabel1=Pulvis for CsModular
-english.WelcomeLabel2=Install Pulvis for CsModular. Pulvis Grain Freeze, Pulvis Grain Sample, and Pulvis Grain Osc keep the same controls and sound engine.%n%nPulvis 0.0.5 installs in the selected CsModular library folder.
+english.WelcomeLabel2=Install Pulvis for CsModular. Pulvis Grain Freeze, Pulvis Grain Sample, and Pulvis Grain Osc keep the same controls and sound engine.%n%nPulvis 0.0.6 installs in the selected CsModular library folder.
 english.SelectDirLabel3=Choose the Pulvis library folder
-english.SelectDirDesc=Pulvis 0.0.5 will be installed in the selected library folder.
+english.SelectDirDesc=Pulvis 0.0.6 will be installed in the selected library folder.
 english.ReadyLabel1=Ready to install Pulvis
 english.FinishedHeadingLabel=Pulvis is ready
-english.FinishedLabel=Pulvis 0.0.5 has been installed. Restart CsModular to load the modules.
+english.FinishedLabel=Pulvis 0.0.6 has been installed. Restart CsModular to load the modules.
 chinesesimp.WelcomeLabel1=为 CsModular 安装微粒
-chinesesimp.WelcomeLabel2=为 CsModular 安装微粒。微粒 · 颗粒冻结、微粒 · 颗粒采样和微粒 · 颗粒振荡器保留原有控制项与声音引擎。%n%n微粒 0.0.5 将安装到所选的 CsModular 库文件夹。
+chinesesimp.WelcomeLabel2=为 CsModular 安装微粒。微粒 · 颗粒冻结、微粒 · 颗粒采样和微粒 · 颗粒振荡器保留原有控制项与声音引擎。%n%n微粒 0.0.6 将安装到所选的 CsModular 库文件夹。
 chinesesimp.SelectDirLabel3=选择 Pulvis 库文件夹
-chinesesimp.SelectDirDesc=微粒 0.0.5 将安装到所选的插件库文件夹。
+chinesesimp.SelectDirDesc=微粒 0.0.6 将安装到所选的插件库文件夹。
 chinesesimp.ReadyLabel1=准备安装微粒
 chinesesimp.FinishedHeadingLabel=微粒已就绪
-chinesesimp.FinishedLabel=微粒 0.0.5 已安装。请重新启动 CsModular 以加载模块。
+chinesesimp.FinishedLabel=微粒 0.0.6 已安装。请重新启动 CsModular 以加载模块。
 russian.WelcomeLabel1=Установка Пульвиса для CsModular
-russian.WelcomeLabel2=Установите Пульвис для CsModular. Модули «Пульвис · Гранулярная заморозка», «Пульвис · Гранулярный сэмпл» и «Пульвис · Гранулярный осциллятор» сохраняют прежние элементы управления и звуковой движок.%n%nПульвис 0.0.5 будет установлен в выбранную папку библиотеки CsModular.
+russian.WelcomeLabel2=Установите Пульвис для CsModular. Модули «Пульвис · Гранулярная заморозка», «Пульвис · Гранулярный сэмпл» и «Пульвис · Гранулярный осциллятор» сохраняют прежние элементы управления и звуковой движок.%n%nПульвис 0.0.6 будет установлен в выбранную папку библиотеки CsModular.
 russian.SelectDirLabel3=Выберите папку библиотеки Pulvis
-russian.SelectDirDesc=Пульвис 0.0.5 будет установлен в выбранную папку библиотеки.
+russian.SelectDirDesc=Пульвис 0.0.6 будет установлен в выбранную папку библиотеки.
 russian.ReadyLabel1=Готово к установке Пульвиса
 russian.FinishedHeadingLabel=Пульвис готов
-russian.FinishedLabel=Пульвис 0.0.5 установлен. Перезапустите CsModular, чтобы загрузить модули.
+russian.FinishedLabel=Пульвис 0.0.6 установлен. Перезапустите CsModular, чтобы загрузить модули.
 
 [Files]
 Source: "..\..\modules\GrainFreeze.js"; DestDir: "{tmp}"; Flags: dontcopy
@@ -121,6 +121,7 @@ Source: "..\..\README.zh-CN.md"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "..\..\README.ru.md"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "..\..\LICENSE"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "..\..\assets\pulvis-icon.png"; DestDir: "{tmp}"; Flags: dontcopy
+Source: "..\..\assets\pulvis-header-en.png"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "..\..\assets\pulvis-social-preview.png"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "..\..\assets\pulvis-header-zh-CN.png"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "..\..\assets\pulvis-header-ru.png"; DestDir: "{tmp}"; Flags: dontcopy
@@ -532,6 +533,7 @@ begin
     ExtractTemporaryFile('README.ru.md');
     ExtractTemporaryFile('LICENSE');
     ExtractTemporaryFile('pulvis-icon.png');
+    ExtractTemporaryFile('pulvis-header-en.png');
     ExtractTemporaryFile('pulvis-social-preview.png');
     ExtractTemporaryFile('pulvis-header-zh-CN.png');
     ExtractTemporaryFile('pulvis-header-ru.png');

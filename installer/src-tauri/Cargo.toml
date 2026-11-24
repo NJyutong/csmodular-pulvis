@@ -1,6 +1,6 @@
 [package]
 name = "pulvis-installer"
-version = "0.0.5"
+version = "0.0.6"
 description = "Cross-platform installer for the Pulvis library"
 authors = ["Zhang Shengwei"]
 edition = "2021"

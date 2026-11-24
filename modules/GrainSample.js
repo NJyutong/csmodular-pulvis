@@ -9,7 +9,7 @@ export const GrainSampleModule = {
     "category": "sample",
     "status": "passable",
     "pulvisStudio": true,
-    "pulvisVersion": "0.0.5",
+    "pulvisVersion": "0.0.6",
     "width": 500,
     "height": 300,
     "gridHeight": 20,
@@ -52,7 +52,8 @@ export const GrainSampleModule = {
         111,
         113,
         115,
-        116
+        116,
+        118
     ],
     "outputs": [
         201,
@@ -283,6 +284,7 @@ export const GrainSampleModule = {
             "max": 48,
             "defaultValue": 0,
             "snapping": true,
+            "showZeroIndicator": true,
             "csoundName": "Pitch"
         },
         {
@@ -522,6 +524,7 @@ export const GrainSampleModule = {
             "max": 12,
             "defaultValue": -12,
             "snapping": true,
+            "showZeroIndicator": true,
             "csoundName": "Level"
         },
         {
@@ -609,6 +612,7 @@ export const GrainSampleModule = {
             "max": 100,
             "defaultValue": 0,
             "snapping": true,
+            "showZeroIndicator": true,
             "csoundName": "Scan"
         },
         {
@@ -623,6 +627,20 @@ export const GrainSampleModule = {
                 "ru": "Скан %/с"
             },
             "fontSize": 10
+        },
+        {
+            "componentType": "Input",
+            "id": "118",
+            "x": 225,
+            "y": 136,
+            "jackType": "control",
+            "bandwidth": "static",
+            "ConnectorName": "Scan %/s CV",
+            "connectorNameI18n": {
+                "en": "Scan %/s CV",
+                "zh": "扫描 %/秒 调制输入",
+                "ru": "Модуляция: Скан %/с"
+            }
         },
         {
             "componentType": "Knob",

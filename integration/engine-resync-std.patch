@@ -1,0 +1,191 @@
+diff --git a/main.js b/main.js
+index 5c469f1..20665aa 100644
+--- a/main.js
++++ b/main.js
+@@ -1109,6 +1109,7 @@
+             area: (module.layer || 'voice').toUpperCase(),
+             hpos: module.gridX || 0,
+             vpos: module.gridY || 0,
++            ...(module.getPulvisSettings && { pulvisSettings: module.getPulvisSettings() }),
+             customColor: module.customColor || null,
+             midiMappings: this._collectMidiMappings(module),
+         };
+diff --git a/src/PatchLoader.js b/src/PatchLoader.js
+index 9115f0d..2794354 100644
+--- a/src/PatchLoader.js
++++ b/src/PatchLoader.js
+@@ -432,6 +432,7 @@
+             }
+         }
+ 
++        module.restorePulvisSettings?.(moduleDef.pulvisSettings);
+         if (moduleDef.customColor) {
+             // ⭐ Новый формат: отдельное поле
+             module.customColor = moduleDef.customColor;
+diff --git a/src/csound/CsoundEngine.js b/src/csound/CsoundEngine.js
+index 56e331d..def8563 100644
+--- a/src/csound/CsoundEngine.js
++++ b/src/csound/CsoundEngine.js
+@@ -4,6 +4,7 @@
+ // Все обращения к Csound-инстансу — только через этот класс.
+ //
+ // Runtime: @csound/browser 7.0.0-beta33, loaded from unpkg.
++import { getPulvisQuality } from '../ui/PulvisPanel.js';
+ import { GrainSamples } from './GrainSamples.js';
+ import { localizePulvis as localize } from '../utils/locale.js';
+ export const CSOUND_VERSION = '7.0.0-beta33';
+@@ -151,7 +152,7 @@
+             }
+ 
+             for (const id of this._pulvisScopes.keys()) this._scopeBuffers.delete(id);
+-            this._pulvisScopes = new Map(this.system.csoundGen.pulvisScopeTables);
++            await this._restorePulvisChannels();
+             if (this._scopeTables.size || this._pulvisScopes.size) {
+                 if (this._scopePollInterval) {
+                     clearInterval(this._scopePollInterval);
+@@ -289,7 +290,7 @@
+             }
+ 
+             for (const id of this._pulvisScopes.keys()) this._scopeBuffers.delete(id);
+-            this._pulvisScopes = new Map(this.system.csoundGen.pulvisScopeTables);
++            await this._restorePulvisChannels();
+             if (this._scopeTables.size || this._pulvisScopes.size) {
+                 if (this._scopePollInterval) {
+                     clearInterval(this._scopePollInterval);
+@@ -318,6 +319,13 @@
+      * Переслать текущие значения всех control-каналов в Csound.
+      * Нужно после recompile, потому что новый ORC видит каналы как 0.
+      */
++    async _restorePulvisChannels() {
++        this._pulvisScopes = new Map(this.system.csoundGen.pulvisScopeTables);
++        if (!this._pulvisScopes.size) return;
++        await this.setChannel('pulvis_quality', getPulvisQuality());
++        await Promise.all(this.system.components.map(panel => panel.syncPulvisChannels?.()));
++    }
++
+     async _resyncAllControls() {
+         if (!this.isReady()) return;
+         const system = this.system;
+diff --git a/src/ui/PulvisPanel.js b/src/ui/PulvisPanel.js
+index 4a395ac..934fc5c 100644
+--- a/src/ui/PulvisPanel.js
++++ b/src/ui/PulvisPanel.js
+@@ -88,24 +88,57 @@
+     return rootMidi + detune / 100;
+ }
+ 
++function effectivePitchSettings(panel) {
++    const root = getActiveSampleSourceRoot(panel);
++    const mode = panel.pulvisScaleMode === 1 && (panel.jsonName === 'GrainOsc' || root > 0) ? 1 : 0;
++    const choices = mode ? KEY_SCALES : REL_INTERVALS;
++    const scale = choices.some(choice => choice.idx === panel.pulvisScale) ? panel.pulvisScale : (mode ? 5 : 0);
++    return { root, scale, mode };
++}
++
+ function syncPanelEngineChannels(panel) {
+-    const engine = panel?.parentSystem?.csoundEngine;
+-    if (!engine || engine.state !== 'running' || !engine.instance) return;
+-    const displayTable = engine._pulvisScopes?.get?.(panel.moduleId + ':display');
+-    const q = getPulvisQuality();
+-    engine.setChannel?.('pulvis_quality', q);
+-    if (displayTable > 0) {
+-        const isFreeze = panel.jsonName === 'GrainFreeze';
+-        const srcRoot = getActiveSampleSourceRoot(panel);
+-        const scaleMode = !isFreeze && panel.pulvisScaleMode === 1 && (panel.jsonName === 'GrainOsc' || srcRoot > 0) ? 1 : 0;
+-        engine.setChannel?.(`pulvis_${displayTable}_scale`, Number(panel.pulvisScale) || 0);
+-        engine.setChannel?.(`pulvis_${displayTable}_scalemode`, scaleMode);
+-        engine.setChannel?.(`pulvis_${displayTable}_keyroot`, Number(panel.pulvisKeyRoot) || 0);
+-        engine.setChannel?.(`pulvis_${displayTable}_srcroot`, srcRoot);
+-        engine.setChannel?.(`pulvis_${displayTable}_sync`, Number(panel.pulvisSync) || 0);
+-        engine.setChannel?.(`pulvis_${displayTable}_tone`, Number(panel.pulvisTone) || 0);
+-    }
+-    panel._syncedCsoundInstance = engine.instance;
++    const engine = panel.parentSystem?.csoundEngine;
++    const id = engine?._pulvisScopes?.get(panel.moduleId + ':display');
++    if (!id || engine.state !== 'running') return;
++    const { root, scale, mode } = effectivePitchSettings(panel);
++    const controls = {
++        scale,
++        scalemode: mode,
++        keyroot: panel.pulvisKeyRoot || 0,
++        srcroot: root,
++        sync: panel.pulvisSync || 0,
++        tone: panel.pulvisTone || 0,
++    };
++    return Promise.all(Object.entries(controls).map(([key, value]) =>
++        engine.setChannel(`pulvis_${id}_${key}`, value)));
++}
++
++function engineSettings(panel) {
++    return {
++        scale: panel.pulvisScale || 0, scaleMode: panel.pulvisScaleMode || 0,
++        keyRoot: panel.pulvisKeyRoot || 0, sync: panel.pulvisSync || 0, tone: panel.pulvisTone || 0,
++        slotRoots: { ...panel.pulvisSlotRoots }, slotDetunes: { ...panel.pulvisSlotDetunes },
++    };
++}
++
++function restoreEngineSettings(panel, settings) {
++    if (!settings || typeof settings !== 'object') return;
++    const bounded = (value, min, max) =>
++        Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : 0;
++    panel.pulvisScaleMode = panel.jsonName !== 'GrainFreeze' && settings.scaleMode === 1 ? 1 : 0;
++    const scales = panel.pulvisScaleMode ? KEY_SCALES : REL_INTERVALS;
++    panel.pulvisScale = scales.some(s => s.idx === settings.scale) ? settings.scale : (panel.pulvisScaleMode ? 5 : 0);
++    panel.pulvisKeyRoot = Math.round(bounded(settings.keyRoot, 0, 11));
++    panel.pulvisSync = Math.round(bounded(settings.sync, 0, 8));
++    panel.pulvisTone = bounded(settings.tone, -1, 1);
++    panel.pulvisSlotRoots = {};
++    panel.pulvisSlotDetunes = {};
++    for (let slot = 1; slot <= 8; slot++) {
++        const root = settings.slotRoots?.[slot];
++        if (Number.isInteger(root) && root >= 24 && root <= 96) panel.pulvisSlotRoots[slot] = root;
++        const cents = Math.round(bounded(settings.slotDetunes?.[slot], -50, 50));
++        if (cents) panel.pulvisSlotDetunes[slot] = cents;
++    }
+ }
+ 
+ export function applyPulvisEngineOption(panel, key, value) {
+@@ -124,7 +157,8 @@
+     if (key === 'scale') panel.pulvisScale = Math.max(0, Math.min(7, Math.round(num)));
+     else if (key === 'scaleMode') {
+         panel.pulvisScaleMode = num >= 1 ? 1 : 0;
+-        if (panel.pulvisScaleMode === 1 && (!panel.pulvisScale || panel.pulvisScale < 3)) panel.pulvisScale = 5;
++        const scales = panel.pulvisScaleMode ? KEY_SCALES : REL_INTERVALS;
++        if (!scales.some(s => s.idx === panel.pulvisScale)) panel.pulvisScale = panel.pulvisScaleMode ? 5 : 0;
+     } else if (key === 'keyRoot') panel.pulvisKeyRoot = ((Math.round(num) % 12) + 12) % 12;
+     else if (key === 'slotRoot') {
+         const slot = Math.max(1, Math.min(8, Math.round(readPanelVal(panel, 14, 1))));
+@@ -150,11 +184,9 @@
+ 
+ function formatOledEngineSuffix(panel, lang) {
+     const parts = [];
+-    const scaleIdx = panel.pulvisScale || 0;
++    const { scale: scaleIdx, mode } = effectivePitchSettings(panel);
+     if (scaleIdx > 0) {
+-        const isFreeze = panel.jsonName === 'GrainFreeze';
+-        const srcRoot = getActiveSampleSourceRoot(panel);
+-        if (!isFreeze && panel.pulvisScaleMode === 1 && (panel.jsonName === 'GrainOsc' || srcRoot > 0)) {
++        if (mode) {
+             const keyName = NOTE_NAMES[(panel.pulvisKeyRoot || 0) % 12];
+             const sc = KEY_SCALES.find(s => s.idx === scaleIdx) || KEY_SCALES[0];
+             parts.push(`${keyName} ${localize(sc.short, lang)}`);
+@@ -702,9 +734,6 @@
+     const engine = panel.parentSystem.csoundEngine;
+     const tr = (en, zh, ru) => localize({ en, zh, ru }, lang);
+     const running = engine.state === 'running' && !engine.isRecompiling;
+-    if (running && engine.instance && panel._syncedCsoundInstance !== engine.instance) {
+-        syncPanelEngineChannels(panel);
+-    }
+     const data = running && engine.getScopeBuffer(panel.moduleId + ':display');
+     const frame = data?.[0] === 1 ? data : null;
+     const winIdx = frame ? frame[7] : Math.round(readPanelVal(panel, 7));
+@@ -1448,6 +1477,9 @@
+     panel.jsonName = definition.type;
+     panel.uiLanguage = definition.uiLanguage;
+     panel.pulvisControls = new Map();
++    panel.syncPulvisChannels = () => syncPanelEngineChannels(panel);
++    panel.getPulvisSettings = () => engineSettings(panel);
++    panel.restorePulvisSettings = settings => restoreEngineSettings(panel, settings);
+     for (const comp of panel.components) {
+         const spec = definition.components.find(item => String(item.id) === comp.id);
+         if (spec.connectorNameI18n) comp.label = spec.ConnectorName; if (spec.showZeroIndicator || spec.snapping) comp.showZeroIndicator = true;

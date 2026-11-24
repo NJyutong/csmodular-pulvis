@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Pulvis Installer",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "identifier": "com.csmodular.pulvis.installer",
   "build": {
     "frontendDist": "../ui"

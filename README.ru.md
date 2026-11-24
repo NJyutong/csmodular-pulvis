@@ -23,32 +23,32 @@
 После установки закройте CsModular и выберите установщик Pulvis для своей системы и процессора.
 
 <p align="center">
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="Скачать Pulvis 0.0.5 · Windows x64"></a>
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-windows-arm64.exe"><img src="assets/downloads/windows-arm64.png" width="231" alt="Скачать Pulvis 0.0.5 · Windows ARM64"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-windows-x64.exe"><img src="assets/downloads/windows-x64.png" width="231" alt="Скачать Pulvis 0.0.6 · Windows x64"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-windows-arm64.exe"><img src="assets/downloads/windows-arm64.png" width="231" alt="Скачать Pulvis 0.0.6 · Windows ARM64"></a>
 </p>
 
 Для ПК с процессором Intel или AMD выберите x64, для Windows на Arm — ARM64. Запустите `.exe` и укажите папку `libraries/pulvis` в каталоге CsModular.
 
 <p align="center">
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-arm64.pkg"><img src="assets/downloads/macos-arm64.png" width="231" alt="Скачать Pulvis 0.0.5 · macOS Apple Silicon"></a>
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-macos-x64.pkg"><img src="assets/downloads/macos-x64.png" width="231" alt="Скачать Pulvis 0.0.5 · macOS Intel"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-macos-arm64.pkg"><img src="assets/downloads/macos-arm64.png" width="231" alt="Скачать Pulvis 0.0.6 · macOS Apple Silicon"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-macos-x64.pkg"><img src="assets/downloads/macos-x64.png" width="231" alt="Скачать Pulvis 0.0.6 · macOS Intel"></a>
 </p>
 
 Для Mac с чипом серии M выберите Apple Silicon, для Mac с процессором Intel — Intel. Откройте `.pkg` и следуйте указаниям установщика.
 
 <p align="center">
-  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-linux-x64.deb"><img src="assets/downloads/linux-x64.png" width="231" alt="Скачать Pulvis 0.0.5 · Linux amd64 .deb"></a>
+  <a href="https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-linux-x64.deb"><img src="assets/downloads/linux-x64.png" width="231" alt="Скачать Pulvis 0.0.6 · Linux amd64 .deb"></a>
 </p>
 
 В Debian или Ubuntu выполните команду из каталога, в который скачан пакет.
 
 ```sh
-sudo apt install ./Pulvis-0.0.5-linux-x64.deb
+sudo apt install ./Pulvis-0.0.6-linux-x64.deb
 ```
 
 Откройте CsModular и нажмите **Пробел**. В разделе **Pulvis** появятся три модуля.
 
-Pulvis 0.0.5 · [Исходный код (ZIP)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/Pulvis-0.0.5-source.zip) · [Контрольные суммы SHA-256](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.5/SHA256SUMS.txt)
+Pulvis 0.0.6 · [Исходный код (ZIP)](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/Pulvis-0.0.6-source.zip) · [Контрольные суммы SHA-256](https://github.com/NJyutong/csmodular-pulvis/releases/download/v0.0.6/SHA256SUMS.txt)
 
 <details>
 <summary>Другой путь установки, обновление и удаление</summary>
@@ -85,8 +85,9 @@ Pulvis 0.0.5 · [Исходный код (ZIP)](https://github.com/NJyutong/csmo
 - **Язык:** переключает все панели и меню модулей Пульвис между **Русский**, **简体中文**, **English** и **Как в системе** (выбор сохраняется на устройстве). Основной браузер модулей хоста остаётся на английском в едином стиле с хостом.
 - **Цвет панели:** 32 оттенка для окраски корпуса и акцента модуля, а кнопка **↺ Как в теме** мгновенно возвращает исходный матовый графитовый цвет.
 - **О модуле:** версия, сайт проекта, сведения об авторских правах и лицензия MIT.
+- **Обновлённый движок и параметры (0.0.6):** ядро гранулярного синтеза Csound полностью обновлено (единый 128-слотовый пул без ветвлений, предвычисленные таблицы окон Ханна/Блэкмана, мгновенная нормализация по огибающей, мягкий ограничитель обратной связи и ускорение до `3,88×` в режиме Эко). В меню доступны квантизация высоты (**Относительный интервал** или **В тональность** с тоникой и ладом; в Grain Sample — **Основной тон слота и тонкая подстройка**), **Синхронизация BPM** с хостом (`1/1`–`1/32`), **Тон влажного сигнала** (только в Grain Freeze) и **Режим CPU** (**Авто** по устройству или вручную Баланс / Эко / Студия HQ). `Alt + клик` по ручке или полю значения открывает точный ввод с клавиатуры.
 
-Если в контекстном меню нет команды просмотра спектра, проверьте, что в CsModular установлены обновлённые панели Pulvis. Опубликованные установщики 0.0.5 вышли до изменения меню.
+Если в контекстном меню нет команд спектра или параметров движка, проверьте, что в хосте CsModular установлена актуальная интеграция Pulvis 0.0.6.
 
 ## Параметры и управление
 
@@ -101,7 +102,7 @@ Pulvis 0.0.5 · [Исходный код (ZIP)](https://github.com/NJyutong/csmo
 | **Высота, пт / Высота (A3)** | Транспонирование (`−48`…`+48` полутонов; `0 = 220 Гц` у Osc) | `+12` полутонов |
 | **Разбр. выс.** | Симметричный случайный разброс высоты (`0–24` полутона) | `+12` полутонов |
 | **Окно** | Огибающая гранулы: **Ханн**, **Треуг.** или **Блэкман** | `+2` |
-| **Направл.** | Направление воспроизведения гранул: **Вперёд** или **Назад** | Назад |
+| **Направл.** *(Freeze / Sample)* | Направление воспроизведения гранул: **Вперёд** или **Назад** | Назад |
 | **Панорама / Разбр. пан.** | Положение в стереополе и случайная ширина (`±0.5`) | Полный ход |
 | **Заморозка / Фикс. поз. / Фикс. фазы** | Freeze: **Запись / Стоп** буфера · Sample: **Следить / Фикс.** позиции и сканирования · Osc: **Следить / Фикс.** деформации | Фиксация / Стоп |
 | **Разбр. вр.** | Нерегулярность запусков (`0–100%`, до `±45%` интервала при неизменной средней плотности) | `+100%` |
@@ -112,7 +113,7 @@ Pulvis 0.0.5 · [Исходный код (ZIP)](https://github.com/NJyutong/csmo
 | **Снимок** *(Freeze)* | Копирует текущий буфер Freeze в личную таблицу снимка | — |
 | **Обратная связь** *(Freeze)* | Возврат гранул в запись (`0–0.95`, ограничение пиков `±1`) | `+0.25` |
 | **Слот** *(Sample)* | Выбор одного из 8 WAV-слотов сеанса (`#1`–`#8`) | — |
-| **Скан %/с** *(Sample)* | Скорость автоматического прохода по файлу (`−100%`…`+100%` в секунду) | — |
+| **Скан %/с** *(Sample)* | Скорость автоматического прохода по файлу (`−100%`…`+100%` в секунду) | `+100%/с` |
 | **Волна** *(Osc)* | Форма волны: **Синус**, **Треугольник**, **Пила**, **Меандр** | — |
 
 ## Поддержка WAV и примечания

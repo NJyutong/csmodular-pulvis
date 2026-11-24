@@ -1,6 +1,6 @@
 ;@ requires GrainCore.txt
-opcode GrainOsc, 0, kkkkkkkkkkkkkkkkkkkkkkkkkkkkkko
-    kDensity, kSize, kPosition, kPosJitter, kPitch, kPitchJitter, kWindow, kPan, kSpread, kFreeze, kLevel, kSeed, kWave, kTimeJitter, kReverse, kDensityIn, kSizeIn, kPositionIn, kPosJitterIn, kPitchIn, kPitchJitterIn, kWindowIn, kPanIn, kSpreadIn, kFreezeIn, kLevelIn, kTimeJitterIn, kReverseIn, kOutL, kOutR, iDisplay xin
+opcode GrainOsc, 0, kkkkkkkkkkkkkkkkkkkkkkkkkkkko
+    kDensity, kSize, kPosition, kPosJitter, kPitch, kPitchJitter, kWindow, kPan, kSpread, kFreeze, kLevel, kSeed, kWave, kTimeJitter, kDensityIn, kSizeIn, kPositionIn, kPosJitterIn, kPitchIn, kPitchJitterIn, kWindowIn, kPanIn, kSpreadIn, kFreezeIn, kLevelIn, kTimeJitterIn, kOutL, kOutR, iDisplay xin
     aDry = 0
     kDensityCV zkr kDensityIn
     kDensity = kDensity + kDensityCV * 48
@@ -26,8 +26,6 @@ opcode GrainOsc, 0, kkkkkkkkkkkkkkkkkkkkkkkkkkkkkko
     kLevel = kLevel + kLevelCV * 12
     kTimeJitterCV zkr kTimeJitterIn
     kTimeJitter = kTimeJitter / 100 + kTimeJitterCV * 1
-    kReverseCV zkr kReverseIn
-    kReverse = kReverse + kReverseCV * 1
     kDensity limit kDensity, 0, 48
     kSize limit kSize, 2, 400
     iFrames = ftlen(giSin)
@@ -45,14 +43,13 @@ opcode GrainOsc, 0, kkkkkkkkkkkkkkkkkkkkkkkkkkkkkko
     iSquare3 ftgentmp 0, 0, iFrames, 10, 1.000000000, 0.000000000, 0.333333333
     iWaveTables[] fillarray giSin, iTriangle24, iTriangle12, iTriangle6, iTriangle3, giSin, iSaw24, iSaw12, iSaw6, iSaw3, giSin, iSquare24, iSquare12, iSquare6, iSquare3, giSin
     kWave = int(limit(kWave, 0, 3) + 0.5)
-    kHighestPitch = limit(kPitch + limit(kPitchJitter, 0, 24), -48, 48)
-    kHarmonicBudget = (sr * 0.5) / (220 * pow(2, kHighestPitch / 12))
+    kCenterPitch = limit(kPitch, -48, 48)
+    kHarmonicBudget = (sr * 0.5) / (220 * pow(2, kCenterPitch / 12))
     kBand = (kHarmonicBudget >= 24 ? 0 : (kHarmonicBudget >= 12 ? 1 : (kHarmonicBudget >= 6 ? 2 : (kHarmonicBudget >= 3 ? 3 : 4))))
-    kTableIndex = (kWave == 0 ? 0 : 1 + (kWave - 1) * 5 + kBand)
-    kTable = iWaveTables[kTableIndex]
+    kTable = (kWave == 0 ? giSin : -(1000 * iWaveTables[1 + (kWave - 1) * 5] + giSin))
     kFrames = iFrames
     kRate = 220 * kFrames
-    aWetL, aWetR CMGrainCoreExtended aDry, 2, kTable, kFrames, kRate, kDensity, kSize, kPosition, kPosJitter, kPitch, kPitchJitter, kWindow, kPan, kSpread, kFreeze, kSeed, kTimeJitter, kReverse, 0, 0, 0, 0, 0, iDisplay
+    aWetL, aWetR CMGrainCoreExtended aDry, 2, kTable, kFrames, kRate, kDensity, kSize, kPosition, kPosJitter, kPitch, kPitchJitter, kWindow, kPan, kSpread, kFreeze, kSeed, kTimeJitter, 0, 0, 0, 0, 0, 0, iDisplay
     kLevel limit kLevel, -24, 12
     kLevel = pow(10, kLevel / 20)
     aLevel interp kLevel

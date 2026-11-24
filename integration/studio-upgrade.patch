@@ -1,8 +1,16 @@
 diff --git a/main.js b/main.js
-index 9c9f510..5c469f1 100644
+index 9c9f510..20665aa 100644
 --- a/main.js
 +++ b/main.js
-@@ -1926,7 +1926,7 @@ class ModularSystem {
+@@ -1109,6 +1109,7 @@
+             area: (module.layer || 'voice').toUpperCase(),
+             hpos: module.gridX || 0,
+             vpos: module.gridY || 0,
++            ...(module.getPulvisSettings && { pulvisSettings: module.getPulvisSettings() }),
+             customColor: module.customColor || null,
+             midiMappings: this._collectMidiMappings(module),
+         };
+@@ -1926,7 +1927,7 @@
              }
          }
  
@@ -74,7 +82,7 @@ index 7e2a451..81abd51 100644
      }
  
 diff --git a/src/PatchLoader.js b/src/PatchLoader.js
-index b5d9700..9115f0d 100644
+index b5d9700..2794354 100644
 --- a/src/PatchLoader.js
 +++ b/src/PatchLoader.js
 @@ -1,5 +1,4 @@
@@ -83,7 +91,7 @@ index b5d9700..9115f0d 100644
  import { createFileInput, triggerFileInput } from './utils/fileInput.js';
  import { Sticker } from './stickers/Sticker.js';
  import { libraryStore } from './api/index.js';
-@@ -244,7 +243,7 @@ export class PatchLoader {
+@@ -244,7 +243,7 @@
          await this.ensureModuleLoaded(moduleName, moduleLibrary);
          
          // Находим позицию
@@ -92,7 +100,7 @@ index b5d9700..9115f0d 100644
          
          // Создаем модуль
          const module = this.moduleFactory.createModule(moduleName, position.x, position.y, layerName);
-@@ -336,15 +335,17 @@ export class PatchLoader {
+@@ -336,15 +335,17 @@
          }
      }
      
@@ -114,20 +122,30 @@ index b5d9700..9115f0d 100644
          }
          
          return { x: preferredX, y: preferredY };
+@@ -431,6 +432,7 @@
+             }
+         }
+ 
++        module.restorePulvisSettings?.(moduleDef.pulvisSettings);
+         if (moduleDef.customColor) {
+             // ⭐ Новый формат: отдельное поле
+             module.customColor = moduleDef.customColor;
 diff --git a/src/csound/CsoundEngine.js b/src/csound/CsoundEngine.js
-index 4c182ec..ea4ea0d 100644
+index 4c182ec..def8563 100644
 --- a/src/csound/CsoundEngine.js
 +++ b/src/csound/CsoundEngine.js
-@@ -5,7 +5,7 @@
+@@ -4,8 +4,9 @@
+ // Все обращения к Csound-инстансу — только через этот класс.
  //
  // Runtime: @csound/browser 7.0.0-beta33, loaded from unpkg.
++import { getPulvisQuality } from '../ui/PulvisPanel.js';
  import { GrainSamples } from './GrainSamples.js';
 -import { localize } from '../utils/locale.js';
 +import { localizePulvis as localize } from '../utils/locale.js';
  export const CSOUND_VERSION = '7.0.0-beta33';
  export const CSOUND_CDN = `https://www.unpkg.com/@csound/browser@${CSOUND_VERSION}/dist/csound.js`;
  
-@@ -29,6 +29,7 @@ export class CsoundEngine {
+@@ -29,6 +30,7 @@
          this._ledPollInterval = null;      // setInterval id
          // ⭐ Scope-каналы
          this._scopeTables = new Map();     // cableId -> tableNum
@@ -135,44 +153,59 @@ index 4c182ec..ea4ea0d 100644
          this._scopeBuffers = new Map();    // cableId -> Float64Array
          this._scopePollInterval = null;
      }
-@@ -149,7 +150,9 @@ export class CsoundEngine {
+@@ -149,7 +151,9 @@
                  this._ensureLedPolling();
              }
  
 -            if (this._scopeTables.size > 0) {
 +            for (const id of this._pulvisScopes.keys()) this._scopeBuffers.delete(id);
-+            this._pulvisScopes = new Map(this.system.csoundGen.pulvisScopeTables);
++            await this._restorePulvisChannels();
 +            if (this._scopeTables.size || this._pulvisScopes.size) {
                  if (this._scopePollInterval) {
                      clearInterval(this._scopePollInterval);
                      this._scopePollInterval = null;
-@@ -285,7 +288,9 @@ export class CsoundEngine {
+@@ -285,7 +289,9 @@
                  this._ensureLedPolling();
              }
  
 -            if (this._scopeTables.size > 0) {
 +            for (const id of this._pulvisScopes.keys()) this._scopeBuffers.delete(id);
-+            this._pulvisScopes = new Map(this.system.csoundGen.pulvisScopeTables);
++            await this._restorePulvisChannels();
 +            if (this._scopeTables.size || this._pulvisScopes.size) {
                  if (this._scopePollInterval) {
                      clearInterval(this._scopePollInterval);
                      this._scopePollInterval = null;
-@@ -543,17 +548,25 @@ export class CsoundEngine {
+@@ -313,6 +319,13 @@
+      * Переслать текущие значения всех control-каналов в Csound.
+      * Нужно после recompile, потому что новый ORC видит каналы как 0.
+      */
++    async _restorePulvisChannels() {
++        this._pulvisScopes = new Map(this.system.csoundGen.pulvisScopeTables);
++        if (!this._pulvisScopes.size) return;
++        await this.setChannel('pulvis_quality', getPulvisQuality());
++        await Promise.all(this.system.components.map(panel => panel.syncPulvisChannels?.()));
++    }
++
+     async _resyncAllControls() {
+         if (!this.isReady()) return;
+         const system = this.system;
+@@ -543,17 +556,25 @@
  
          this._scopePollInterval = setInterval(async () => {
              if (this.state !== 'running' || !this.isReady()) return;
 -            if (this._scopeTables.size === 0) return;
-+            if (this.isRecompiling || this._scopeReadPending) return;
-+            this._scopeReadPending = true;
-+            const instance = this.instance;
-+            const scopes = this._pulvisScopes;
-+            try {
- 
+-
 -            for (const [cableId, tableNum] of this._scopeTables) {
 -                try {
 -                    const data = await this.instance.tableCopyOut(tableNum);
 -                    if (data) {
 -                        this._scopeBuffers.set(cableId, data);
++            if (this.isRecompiling || this._scopeReadPending) return;
++            this._scopeReadPending = true;
++            const instance = this.instance;
++            const scopes = this._pulvisScopes;
++            try {
++
 +                for (const [cableId, tableNum] of [...this._scopeTables, ...scopes]) {
 +                    try {
 +                        const data = await instance.tableCopyOut(tableNum);
@@ -185,7 +218,7 @@ index 4c182ec..ea4ea0d 100644
 -                } catch (e) {
 -                    // тихо
                  }
-+                if (scopes.size) this.system._voiceDirty = true;
++                if (scopes.size) { this.system._voiceDirty = true; this.system._fxDirty = true; }
 +            } finally {
 +                this._scopeReadPending = false;
              }
@@ -514,7 +547,7 @@ index 0485eda..dde3b70 100644
 +      panel.pulvisFft = !panel.pulvisFft;
 +      panel.setDirty(true);
 +    });
-+    this.menuElement.append(about, label, view);
++    this.menuElement.append(about, label, view, switchPulvisLanguage.buildEngineMenu(this.system, panel, text => this.t(text)));
 +  }
 +
    updateMenuContent() {

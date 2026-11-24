@@ -6,6 +6,6 @@
     "zh": "微粒",
     "ru": "Пульвис"
   },
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Original Csound granular synthesis: live ring, sample table and periodic wave sources."
 }

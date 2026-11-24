@@ -1,8 +1,8 @@
 diff --git a/main.js b/main.js
-index 0a76740..96d79fd 100644
+index e3308f4..40b7d2b 100644
 --- a/main.js
 +++ b/main.js
-@@ -219,7 +219,7 @@ class ModularSystem {
+@@ -219,7 +219,7 @@
  
      // Debounce для recompile (не чаще раза в 300мс)
      this._recompileDebounced = debounce(
@@ -11,7 +11,7 @@ index 0a76740..96d79fd 100644
          300
      );
      this.setupParallax();
-@@ -260,12 +260,8 @@ class ModularSystem {
+@@ -260,12 +260,8 @@
            this.voiceIndicator.rebuild(n);
        }
  
@@ -26,7 +26,7 @@ index 0a76740..96d79fd 100644
        }
    }
  
-@@ -385,12 +381,7 @@ class ModularSystem {
+@@ -385,12 +381,7 @@
        const ctx = this.dynamicCtx;
        if (!ctx) return;
  
@@ -40,7 +40,7 @@ index 0a76740..96d79fd 100644
        const layers = this.layerManager.layers;
  
        for (const layerName of ['voice', 'fx']) {
-@@ -408,13 +399,22 @@ class ModularSystem {
+@@ -408,13 +399,22 @@
                    );
                    module._dynamicComps = comps;   // может быть []
                }
@@ -65,7 +65,7 @@ index 0a76740..96d79fd 100644
    }
  
    _csoundStateLabel(state) {
-@@ -900,7 +900,7 @@ class ModularSystem {
+@@ -900,7 +900,7 @@
        this.canvas.style.left = '0';
        this.canvas.style.top = '0';
        this.canvas.style.transform = 'none';   // ← убираем центрирование
@@ -74,7 +74,7 @@ index 0a76740..96d79fd 100644
  
        // Сохраняем базовые размеры (для GridCache и т.д.)
        this.baseCanvasWidth = this.canvas.width;
-@@ -929,7 +929,7 @@ class ModularSystem {
+@@ -929,7 +929,7 @@
    }
  
    resizeCanvasToWindow() {
@@ -83,15 +83,16 @@ index 0a76740..96d79fd 100644
        const w = window.innerWidth;
        const h = window.innerHeight;
  
-@@ -1147,6 +1147,7 @@ class ModularSystem {
+@@ -1147,6 +1147,8 @@
              area: (module.layer || 'voice').toUpperCase(),
              hpos: module.gridX || 0,
              vpos: module.gridY || 0,
 +            coordinateSpace: 'world',
++            ...(module.getPulvisSettings && { pulvisSettings: module.getPulvisSettings() }),
              customColor: module.customColor || null,
              midiMappings: this._collectMidiMappings(module),
          };
-@@ -1746,16 +1747,6 @@ class ModularSystem {
+@@ -1746,16 +1748,6 @@
            this._wasDragging = true;
        }
  
@@ -108,7 +109,7 @@ index 0a76740..96d79fd 100644
        // ⭐ Рисуем "modules" (сетка + VOICE + FX) ТОЛЬКО когда реально надо
        const modulesNeedRedraw =
            this._voiceDirty ||
-@@ -1969,16 +1960,7 @@ class ModularSystem {
+@@ -1969,16 +1961,7 @@
            return;
          }
  
@@ -126,7 +127,7 @@ index 0a76740..96d79fd 100644
          const gridHeight = moduleDef.gridHeight || 2;
  
          // 5. Коллизия → свободное место
-@@ -2005,47 +1987,9 @@ class ModularSystem {
+@@ -2005,45 +1988,7 @@
            gridX = freeSpace.gridX;
            gridY = freeSpace.gridY;
  
@@ -139,8 +140,8 @@ index 0a76740..96d79fd 100644
 -          }
 -
            console.log(`✅ Found alternative position: (${gridX}, ${gridY})`);
-         }
- 
+-        }
+-
 -        // 6. ⭐ SOFT LIMIT: не создаём модуль далеко от группы
 -        const sane = this.layerManager.checkSaneDistance(
 -            layerName, gridX, gridY, gridWidth, gridHeight,
@@ -169,12 +170,10 @@ index 0a76740..96d79fd 100644
 -            }
 -            // Если freeSpace не нашёлся — оставляем исходные gridX/Y:
 -            // лучше создать далеко, чем не создать вовсе.
--        }
--
+         }
+ 
          // 7. Создаём модуль
-         const newModule = this.moduleFactory.createModule(
-           moduleType,
-@@ -2420,6 +2364,15 @@ class ModularSystem {
+@@ -2420,6 +2365,15 @@
        ctx.restore();
    }
  
@@ -190,7 +189,7 @@ index 0a76740..96d79fd 100644
    drawLayer(layerName) {
        const layer = this.layerManager.getLayer(layerName);
        if (!layer) return;
-@@ -2520,7 +2473,7 @@ class ModularSystem {
+@@ -2520,7 +2474,7 @@
            const pixelY = module.gridY * BASE_STEP_Y;
  
            module.setPixelPosition(pixelX, pixelY);
@@ -199,7 +198,7 @@ index 0a76740..96d79fd 100644
        });
  
        this.ctx.restore();
-@@ -2615,7 +2568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
+@@ -2615,7 +2569,7 @@
  
      try {
          const img = new Image();
@@ -293,7 +292,7 @@ index fecd811..c857f2c 100644
 \ No newline at end of file
 +}
 diff --git a/src/PatchLoader.js b/src/PatchLoader.js
-index 09b70bc..7dab266 100644
+index 41d5d94..eada9ff 100644
 --- a/src/PatchLoader.js
 +++ b/src/PatchLoader.js
 @@ -1,5 +1,4 @@
@@ -302,7 +301,7 @@ index 09b70bc..7dab266 100644
  import { createFileInput, triggerFileInput } from './utils/fileInput.js';
  import { Sticker } from './stickers/Sticker.js';
  import { libraryStore } from './api/index.js';
-@@ -254,7 +253,7 @@ export class PatchLoader {
+@@ -254,7 +253,7 @@
          const layerName = area.toUpperCase() === 'FX' ? 'fx' : 'voice';
  
          // ⭐ Для FX: сдвигаем Y, чтобы модуль был ниже всех Voice
@@ -311,7 +310,7 @@ index 09b70bc..7dab266 100644
              const fxStartY = this._fxStartY || 0;
              vpos = fxStartY + vpos;   // оригинальный vpos FX — это offset внутри FX-зоны
          }
-@@ -262,7 +261,7 @@ export class PatchLoader {
+@@ -262,7 +261,7 @@
          await this.ensureModuleLoaded(moduleName, moduleLibrary);
          
          // Находим позицию
@@ -320,7 +319,7 @@ index 09b70bc..7dab266 100644
          
          // Создаем модуль
          const module = this.moduleFactory.createModule(moduleName, position.x, position.y, layerName);
-@@ -296,7 +295,11 @@ export class PatchLoader {
+@@ -296,7 +295,11 @@
              if (lib) {
                  // Проверим, установлена ли библиотека
                  const libs = await libraryStore.listLibraries();
@@ -333,7 +332,7 @@ index 09b70bc..7dab266 100644
                  if (!libExists) {
                      throw new Error(
                          `Patch requires library "${lib}" — not installed. ` +
-@@ -305,13 +308,13 @@ export class PatchLoader {
+@@ -305,13 +308,13 @@
                  }
  
                  // Пробуем загрузить
@@ -350,7 +349,7 @@ index 09b70bc..7dab266 100644
                              `already-loaded "${registered.library}/${moduleName}" ` +
                              `(Csound opcode "${moduleName}" is global — only one can be loaded). ` +
                              `Remove the conflicting module or use a different type.`
-@@ -321,7 +324,7 @@ export class PatchLoader {
+@@ -321,7 +324,7 @@
                  }
  
                  throw new Error(
@@ -359,7 +358,7 @@ index 09b70bc..7dab266 100644
                      `(library is installed, but module is missing).`
                  );
              }
-@@ -350,15 +353,17 @@ export class PatchLoader {
+@@ -350,15 +353,17 @@
          }
      }
      
@@ -381,6 +380,14 @@ index 09b70bc..7dab266 100644
          }
          
          return { x: preferredX, y: preferredY };
+@@ -445,6 +450,7 @@
+             }
+         }
+ 
++        module.restorePulvisSettings?.(moduleDef.pulvisSettings);
+         if (moduleDef.customColor) {
+             // ⭐ Новый формат: отдельное поле
+             module.customColor = moduleDef.customColor;
 diff --git a/src/api/libraryStore.tauri.js b/src/api/libraryStore.tauri.js
 index 2d05069..c957179 100644
 --- a/src/api/libraryStore.tauri.js
@@ -473,10 +480,10 @@ index ab8be60..3228b67 100644
            this.gridY = targetGridY;
            this.lastValidGridX = targetGridX;
 diff --git a/src/csound/CsoundEngine.js b/src/csound/CsoundEngine.js
-index 2f9c7e2..61eb4f8 100644
+index 65ade09..07a7725 100644
 --- a/src/csound/CsoundEngine.js
 +++ b/src/csound/CsoundEngine.js
-@@ -3,9 +3,9 @@
+@@ -3,9 +3,10 @@
  // Единая точка работы с Csound.
  // Все обращения к Csound-инстансу — только через этот класс.
  //
@@ -484,12 +491,13 @@ index 2f9c7e2..61eb4f8 100644
 -
 -//export const CSOUND_VERSION = '6.18.7';
 +// Runtime: @csound/browser 7.0.0-beta33, loaded from unpkg.
++import { getPulvisQuality } from '../ui/PulvisPanel.js';
 +import { GrainSamples } from './GrainSamples.js';
 +import { localizePulvis as localize } from '../utils/locale.js';
  export const CSOUND_VERSION = '7.0.0-beta33';
  export const CSOUND_CDN = `https://www.unpkg.com/@csound/browser@${CSOUND_VERSION}/dist/csound.js`;
  
-@@ -17,6 +17,9 @@ export class CsoundEngine {
+@@ -17,6 +18,9 @@
          this.lastRecompileMs = null;
          this.lastRecompileAt = null;
          this.isRecompiling = false;
@@ -499,7 +507,7 @@ index 2f9c7e2..61eb4f8 100644
          // Подписчики на события
          this._stateListeners = [];
          this._messageListeners = [];
-@@ -26,6 +29,7 @@ export class CsoundEngine {
+@@ -26,6 +30,7 @@
          this._ledPollInterval = null;      // setInterval id
          // ⭐ Scope-каналы
          this._scopeTables = new Map();     // cableId -> tableNum
@@ -507,7 +515,7 @@ index 2f9c7e2..61eb4f8 100644
          this._scopeBuffers = new Map();    // cableId -> Float64Array
          this._scopePollInterval = null;
      }
-@@ -78,7 +82,22 @@ export class CsoundEngine {
+@@ -78,7 +83,22 @@
      // ЖИЗНЕННЫЙ ЦИКЛ
      // ============================================
  
@@ -531,7 +539,7 @@ index 2f9c7e2..61eb4f8 100644
          if (this.state === 'initializing') {
              console.warn('[CsoundEngine] Already initializing');
              return false;
-@@ -109,6 +128,7 @@ export class CsoundEngine {
+@@ -109,6 +129,7 @@
              window.csound = this.instance;
  
              this._attachCsoundListeners();
@@ -539,18 +547,18 @@ index 2f9c7e2..61eb4f8 100644
  
              await this.instance.setOption('-odac');
              await this.instance.setOption('-M0');       mark('setOptions');
-@@ -141,7 +161,9 @@ export class CsoundEngine {
+@@ -141,7 +162,9 @@
                  this._ensureLedPolling();
              }
  
 -            if (this._scopeTables.size > 0) {
 +            for (const id of this._pulvisScopes.keys()) this._scopeBuffers.delete(id);
-+            this._pulvisScopes = new Map(this.system.csoundGen.pulvisScopeTables);
++            await this._restorePulvisChannels();
 +            if (this._scopeTables.size || this._pulvisScopes.size) {
                  if (this._scopePollInterval) {
                      clearInterval(this._scopePollInterval);
                      this._scopePollInterval = null;
-@@ -155,7 +177,7 @@ export class CsoundEngine {
+@@ -155,7 +178,7 @@
          } catch (error) {
              console.error('[CsoundEngine] Init error:', error);
              this._emitMessage(error.message || String(error), 'error');
@@ -559,7 +567,7 @@ index 2f9c7e2..61eb4f8 100644
              this._setState('error', error.message);
              return false;
  
-@@ -164,7 +186,48 @@ export class CsoundEngine {
+@@ -164,7 +187,48 @@
          }
      }
  
@@ -609,7 +617,7 @@ index 2f9c7e2..61eb4f8 100644
          if (this.state === 'idle') {
              //console.log('[CsoundEngine] Already stopped');
              return;
-@@ -196,9 +259,9 @@ export class CsoundEngine {
+@@ -196,9 +260,9 @@
      // ГОРЯЧАЯ ЗАМЕНА ORC
      // ============================================
  
@@ -621,7 +629,7 @@ index 2f9c7e2..61eb4f8 100644
          }
  
          console.log('[CsoundEngine] Recompiling via reset + compileOrc...');
-@@ -208,6 +271,7 @@ export class CsoundEngine {
+@@ -208,6 +272,7 @@
  
          try {
              await this.instance.reset();                mark('reset');
@@ -629,7 +637,7 @@ index 2f9c7e2..61eb4f8 100644
  
              await this.instance.setOption('-odac');
              await this.instance.setOption('-M0');       
-@@ -228,7 +292,8 @@ export class CsoundEngine {
+@@ -228,7 +293,8 @@
  
              // Note: @csound/browser readScore() returns Promise<undefined> — no status code.
              // Do not compare against 0. Rely on try/catch + Csound message channel instead.
@@ -639,18 +647,18 @@ index 2f9c7e2..61eb4f8 100644
  
              const sco = this.system.csoundGen.generateSco();
              await this.instance.readScore(sco);
-@@ -247,7 +312,9 @@ export class CsoundEngine {
+@@ -247,7 +313,9 @@
                  this._ensureLedPolling();
              }
  
 -            if (this._scopeTables.size > 0) {
 +            for (const id of this._pulvisScopes.keys()) this._scopeBuffers.delete(id);
-+            this._pulvisScopes = new Map(this.system.csoundGen.pulvisScopeTables);
++            await this._restorePulvisChannels();
 +            if (this._scopeTables.size || this._pulvisScopes.size) {
                  if (this._scopePollInterval) {
                      clearInterval(this._scopePollInterval);
                      this._scopePollInterval = null;
-@@ -264,8 +331,8 @@ export class CsoundEngine {
+@@ -264,8 +332,8 @@
          } catch (e) {
              console.error('[CsoundEngine] recompile via reset failed:', e);
              console.log('[CsoundEngine] Falling back to full restart...');
@@ -661,22 +669,37 @@ index 2f9c7e2..61eb4f8 100644
          } finally {
              this.isRecompiling = false;
          }
-@@ -505,17 +572,29 @@ export class CsoundEngine {
+@@ -275,6 +343,13 @@
+      * Переслать текущие значения всех control-каналов в Csound.
+      * Нужно после recompile, потому что новый ORC видит каналы как 0.
+      */
++    async _restorePulvisChannels() {
++        this._pulvisScopes = new Map(this.system.csoundGen.pulvisScopeTables);
++        if (!this._pulvisScopes.size) return;
++        await this.setChannel('pulvis_quality', getPulvisQuality());
++        await Promise.all(this.system.components.map(panel => panel.syncPulvisChannels?.()));
++    }
++
+     async _resyncAllControls() {
+         if (!this.isReady()) return;
+         const system = this.system;
+@@ -505,17 +580,29 @@
  
          this._scopePollInterval = setInterval(async () => {
              if (this.state !== 'running' || !this.isReady()) return;
 -            if (this._scopeTables.size === 0) return;
-+            const instance = this.instance;
-+            const scopes = this._pulvisScopes;
-+            if (this.isRecompiling || this._scopeReadPending === scopes) return;
-+            this._scopeReadPending = scopes;
-+            try {
- 
+-
 -            for (const [cableId, tableNum] of this._scopeTables) {
 -                try {
 -                    const data = await this.instance.tableCopyOut(tableNum);
 -                    if (data) {
 -                        this._scopeBuffers.set(cableId, data);
++            const instance = this.instance;
++            const scopes = this._pulvisScopes;
++            if (this.isRecompiling || this._scopeReadPending === scopes) return;
++            this._scopeReadPending = scopes;
++            try {
++
 +                for (const [cableId, tableNum] of [...this._scopeTables, ...scopes]) {
 +                    if (instance !== this.instance || scopes !== this._pulvisScopes) break;
 +                    try {
@@ -699,7 +722,7 @@ index 2f9c7e2..61eb4f8 100644
              }
          }, 33);   // ~30 Hz
      }
-@@ -579,4 +658,4 @@ export class CsoundEngine {
+@@ -579,4 +666,4 @@
          
          console.warn('[CsoundEngine] No message listener API found');
      }
@@ -707,10 +730,10 @@ index 2f9c7e2..61eb4f8 100644
 \ No newline at end of file
 +}
 diff --git a/src/csound/CsoundGenerator.js b/src/csound/CsoundGenerator.js
-index d903410..cdc2adb 100644
+index 376d025..f2530e6 100644
 --- a/src/csound/CsoundGenerator.js
 +++ b/src/csound/CsoundGenerator.js
-@@ -28,6 +28,7 @@ export class CsoundGenerator {
+@@ -28,6 +28,7 @@
          for (const udo of BASE_UDOS) this.includes.add(udo); 
          // ⭐ Scope tables
          this._scopeTables = new Map();      // cableId -> { tableNum, bus, isAudio }
@@ -718,7 +741,7 @@ index d903410..cdc2adb 100644
          this._scopeTableCounter = 9000;
  
          // ⭐ UDO text cache (invalidation via invalidateUdoCache())
-@@ -39,23 +40,8 @@ export class CsoundGenerator {
+@@ -39,23 +40,8 @@
          this._numVoices = 8;
          }
  
@@ -744,7 +767,7 @@ index d903410..cdc2adb 100644
  
      /**
       * Загрузить UDO по пути, как он хранится в this.includes.
-@@ -146,18 +132,33 @@ export class CsoundGenerator {
+@@ -146,18 +132,33 @@
      }
  
      async loadAllUdoContents() {
@@ -785,7 +808,7 @@ index d903410..cdc2adb 100644
          // ⭐ Scope code
          const scopeCode = this._generateScopeCode();
          // ⭐ 0. Собираем mapping ftgen (перед остальным)
-@@ -165,22 +166,9 @@ export class CsoundGenerator {
+@@ -165,22 +166,9 @@
          
          this._fetchStats = { count: 0, ms: 0, byPath: {} };
  
@@ -811,10 +834,11 @@ index d903410..cdc2adb 100644
  
          const udoString = udoContents.join('\n\n');
  
-@@ -199,6 +187,16 @@ export class CsoundGenerator {
+@@ -198,6 +186,16 @@
+         const numVoices = this._numVoices || 1;
          const voiceModuleList = Array.from(this.modules.values())
              .filter(m => m.layer === 'voice');
- 
++
 +        // Size the shared voice layout once. Only voice zero and FX publish meters.
 +        this._audioBusCount = this._audioBusCounter;
 +        this._controlBusCount = this._controlBusCounter;
@@ -824,11 +848,10 @@ index d903410..cdc2adb 100644
 +            .filter(m => m.layer === 'fx')
 +            .map(m => this.formatModuleLine(m))
 +            .join('\n');
-+
+ 
          let voiceInstrs = '';
          for (let v = 0; v < numVoices; v++) {
-             const voiceModulesCode = voiceModuleList
-@@ -227,12 +225,6 @@ export class CsoundGenerator {
+@@ -227,12 +225,6 @@
      `;
          }
  
@@ -841,7 +864,7 @@ index d903410..cdc2adb 100644
          // ⭐ 3. Zakinit
          const zakinitString = this.getZakInitString();
          
-@@ -310,6 +302,7 @@ export class CsoundGenerator {
+@@ -310,6 +302,7 @@
      ${scopeCode.ftgens}
      ;---------------------------------
      ; UDO section (inlined from /csound/modules/*.txt)
@@ -849,7 +872,7 @@ index d903410..cdc2adb 100644
      ${udoString}
      ;---------------------------------
      ; VOICE AREA (instr 100..100+N-1)
-@@ -468,11 +461,26 @@ export class CsoundGenerator {
+@@ -468,11 +461,26 @@
      }
  
      _generateScopeCode() {
@@ -880,7 +903,7 @@ index d903410..cdc2adb 100644
          const voiceLines = [];
          const fxLines = [];
  
-@@ -564,15 +572,8 @@ export class CsoundGenerator {
+@@ -564,15 +572,8 @@
                      continue;
                  }
                  
@@ -898,7 +921,7 @@ index d903410..cdc2adb 100644
                  const key = `${cable.id}_${inputId}`;
                  this._converterBuses[key] = {
                      type: convType,
-@@ -657,7 +658,7 @@ export class CsoundGenerator {
+@@ -657,7 +658,7 @@
                  // Проверяем, не использует ли этот номер другой кабель (от того же выхода)
                  const isShared = this._activeCables.some(c => 
                      c.id !== cable.id && 
@@ -907,7 +930,7 @@ index d903410..cdc2adb 100644
                  );
                  
                  if (!isShared) {
-@@ -1077,8 +1078,8 @@ export class CsoundGenerator {
+@@ -1077,8 +1078,8 @@
          });
  
          // ⭐ 3. Индикаторы: LED и MiniVU
@@ -918,16 +941,16 @@ index d903410..cdc2adb 100644
  
          // Карта tap-точек: ключ = `${dir}:${componentId}` → { bus, type, a2kBus }
          // dir = 'output' | 'input'
-@@ -1195,6 +1196,8 @@ export class CsoundGenerator {
+@@ -1195,6 +1196,8 @@
              ...outletBuses.map(b => String(this._busNumber(b.bus, b.type, voiceId))),
              ...extraArgs,
          ];
 +        const display = this.pulvisScopeTables.get(panel?.moduleId + ':display');
-+        if (display !== undefined) allArgs.push(String(voiceId === 0 ? display : 0));
++        if (display !== undefined) allArgs.push(String(voiceId === 0 ? display : -display));
          const callLine = `${moduleName} ${allArgs.join(', ')}`;
  
          // ⭐ 7. Конвертеры — sourceBus и bus со сдвигом по типу
-@@ -1288,19 +1291,14 @@ export class CsoundGenerator {
+@@ -1288,19 +1291,14 @@
              mvuLines.push(`mVU_rms ${bus}, "${channelName}"`);
          }
  
@@ -949,7 +972,7 @@ index d903410..cdc2adb 100644
          ].join('\n');
  
          return result;
-@@ -1477,6 +1475,7 @@ export class CsoundGenerator {
+@@ -1477,6 +1475,7 @@
          this._audioBusCount = 2;
          this._controlBusCount = 2;
          this._scopeTables.clear();
@@ -957,7 +980,7 @@ index d903410..cdc2adb 100644
          this._scopeTableCounter = 9000;
          this.log('🔄 Reset'); 
          //this.showFullCsd();
-@@ -1518,14 +1517,7 @@ export class CsoundGenerator {
+@@ -1518,14 +1517,7 @@
       * @returns {number} номер шины
       */
      _allocateBus(type) {
@@ -973,7 +996,7 @@ index d903410..cdc2adb 100644
      }
  
      /**
-@@ -1536,6 +1528,7 @@ export class CsoundGenerator {
+@@ -1536,6 +1528,7 @@
       * @returns {number}
       */
      _busNumber(localBus, type, voiceId = 0) {
@@ -981,7 +1004,7 @@ index d903410..cdc2adb 100644
          if (type === 'audio') {
              return localBus + voiceId * this._audioBusCount;
          }
-@@ -1579,4 +1572,4 @@ export class CsoundGenerator {
+@@ -1579,4 +1572,4 @@
      }
  
  
@@ -1539,7 +1562,7 @@ index d12b79d..d8a34c3 100644
 +      panel.pulvisFft = !panel.pulvisFft;
 +      panel.setDirty(true);
 +    });
-+    this.menuElement.append(about, label, view);
++    this.menuElement.append(about, label, view, switchPulvisLanguage.buildEngineMenu(this.system, panel, text => this.t(text)));
 +  }
 +
    updateMenuContent() {
@@ -1927,16 +1950,399 @@ index d12b79d..d8a34c3 100644
 +}
 diff --git a/src/ui/PulvisPanel.js b/src/ui/PulvisPanel.js
 new file mode 100644
-index 0000000..8d6c816
+index 0000000..934fc5c
 --- /dev/null
 +++ b/src/ui/PulvisPanel.js
-@@ -0,0 +1,1083 @@
+@@ -0,0 +1,1593 @@
 +import { getCurrentTheme } from '../theme/currentTheme.js';
 +import { getUiLanguage, localize, localizePulvis, getPulvisLanguage, localizeDefinition, setPulvisPreference } from '../utils/locale.js';
 +
 +const UI_FONT = '"Microsoft YaHei UI", "PingFang SC", "Segoe UI", system-ui, Arial, sans-serif';
 +const MONO_FONT = '"JetBrains Mono", "Cascadia Mono", "Consolas", "Segoe UI", monospace';
 +const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
++const QUALITY_STORAGE_KEY = 'pulvis.quality';
++
++const PULVIS_SCALES = [
++    { en: 'Free (Chromatic)', zh: '自由（半音）', ru: 'Свободно', tag: '' },
++    { en: 'Octaves', zh: '八度', ru: 'Октавы', tag: 'OCT' },
++    { en: 'Octaves + 5ths', zh: '八度 + 纯五度', ru: 'Окт + Квинта', tag: '5TH' },
++    { en: 'Major Pentatonic', zh: '大调五声音阶', ru: 'Маж. пентат.', tag: 'MAJ5' },
++    { en: 'Minor Pentatonic', zh: '小调五声音阶', ru: 'Мин. пентат.', tag: 'MIN5' },
++    { en: 'Major', zh: '自然大调', ru: 'Мажор', tag: 'MAJ' },
++    { en: 'Natural Minor', zh: '自然小调', ru: 'Минор', tag: 'MIN' },
++    { en: 'Dorian', zh: '多利亚调式', ru: 'Дорийский', tag: 'DOR' },
++];
++const PULVIS_SYNCS = [
++    { en: 'Free (Hz)', zh: '自由（Hz）', ru: 'Свободно (Гц)', tag: '' },
++    { en: '1/1', zh: '1/1 全音符', ru: '1/1', tag: '1/1' },
++    { en: '1/2', zh: '1/2 二分音符', ru: '1/2', tag: '1/2' },
++    { en: '1/4', zh: '1/4 四分音符', ru: '1/4', tag: '1/4' },
++    { en: '1/8', zh: '1/8 八分音符', ru: '1/8', tag: '1/8' },
++    { en: '1/8T', zh: '1/8T 三连音', ru: '1/8T', tag: '1/8T' },
++    { en: '1/16', zh: '1/16 十六分', ru: '1/16', tag: '1/16' },
++    { en: '1/16T', zh: '1/16T 三连音', ru: '1/16T', tag: '1/16T' },
++    { en: '1/32', zh: '1/32 三十二分', ru: '1/32', tag: '1/32' },
++];
++const PULVIS_QUALITIES = [
++    { value: 'auto', en: 'Auto (Device)', zh: '自动（按设备）', ru: 'Авто (устройство)', tag: 'AUTO' },
++    { value: '0', en: 'Balanced', zh: '均衡模式', ru: 'Баланс', tag: 'BAL' },
++    { value: '1', en: 'Eco (Low-CPU)', zh: '省电（低性能）', ru: 'Эко (CPU)', tag: 'ECO' },
++    { value: '2', en: 'Studio (HQ)', zh: '录音室（HQ）', ru: 'Студия (HQ)', tag: 'HQ' },
++];
++const KEY_SCALES = [
++    { idx: 5, en: 'Major', zh: '自然大调', ru: 'Мажор', short: { en: 'Maj', zh: '大调', ru: 'Маж' } },
++    { idx: 6, en: 'Natural Minor', zh: '自然小调', ru: 'Минор', short: { en: 'Min', zh: '小调', ru: 'Мин' } },
++    { idx: 3, en: 'Major Pentatonic', zh: '大调五声', ru: 'Маж. пентат.', short: { en: 'Maj5', zh: '大五声', ru: 'Маж5' } },
++    { idx: 4, en: 'Minor Pentatonic', zh: '小调五声', ru: 'Мин. пентат.', short: { en: 'Min5', zh: '小五声', ru: 'Мин5' } },
++    { idx: 7, en: 'Dorian', zh: '多利亚调式', ru: 'Дорийский', short: { en: 'Dor', zh: '多利亚', ru: 'Дор' } },
++];
++const REL_INTERVALS = [
++    { idx: 0, en: 'Off (Free)', zh: '关闭（自由）', ru: 'Выкл (своб.)' },
++    { idx: 1, en: 'Octaves', zh: '八度', ru: 'Октавы' },
++    { idx: 2, en: 'Octaves + 5ths', zh: '八度 + 纯五度', ru: 'Окт + Квинта' },
++    { idx: 3, en: 'Major Pentatonic', zh: '大调五声音程', ru: 'Маж. пентат.' },
++    { idx: 4, en: 'Minor Pentatonic', zh: '小调五声音程', ru: 'Мин. пентат.' },
++];
++
++let pulvisAltPressed = false;
++if (typeof window !== 'undefined' && !window.__pulvisKeyHooks) {
++    window.__pulvisKeyHooks = true;
++    window.addEventListener('keydown', e => { if (e.key === 'Alt') pulvisAltPressed = true; });
++    window.addEventListener('keyup', e => { if (e.key === 'Alt') pulvisAltPressed = false; });
++    window.addEventListener('blur', () => { pulvisAltPressed = false; });
++}
++
++export function detectHardwareQuality() {
++    const cores = Number(globalThis.navigator?.hardwareConcurrency) || 0;
++    const mem = Number(globalThis.navigator?.deviceMemory) || 0;
++    if ((cores > 0 && cores <= 4) || (mem > 0 && mem <= 4)) return { tier: 1, cores, mem };
++    if (cores >= 12 && (!mem || mem >= 8)) return { tier: 2, cores, mem };
++    return { tier: 0, cores, mem };
++}
++
++export function getPulvisQualityPreference() {
++    try {
++        const stored = globalThis.localStorage?.getItem(QUALITY_STORAGE_KEY);
++        return ['auto', '0', '1', '2'].includes(stored) ? stored : 'auto';
++    } catch {
++        return 'auto';
++    }
++}
++
++export function getPulvisQuality() {
++    const pref = getPulvisQualityPreference();
++    if (pref === 'auto') return detectHardwareQuality().tier;
++    return Number(pref);
++}
++
++function getActiveSampleSourceRoot(panel) {
++    if (panel?.jsonName !== 'GrainSample') return 0;
++    const slot = Math.max(1, Math.min(8, Math.round(readPanelVal(panel, 14, 1))));
++    const rootMidi = Number(panel.pulvisSlotRoots?.[slot]) || 0;
++    if (rootMidi <= 0) return 0;
++    const detune = Number(panel.pulvisSlotDetunes?.[slot]) || 0;
++    return rootMidi + detune / 100;
++}
++
++function effectivePitchSettings(panel) {
++    const root = getActiveSampleSourceRoot(panel);
++    const mode = panel.pulvisScaleMode === 1 && (panel.jsonName === 'GrainOsc' || root > 0) ? 1 : 0;
++    const choices = mode ? KEY_SCALES : REL_INTERVALS;
++    const scale = choices.some(choice => choice.idx === panel.pulvisScale) ? panel.pulvisScale : (mode ? 5 : 0);
++    return { root, scale, mode };
++}
++
++function syncPanelEngineChannels(panel) {
++    const engine = panel.parentSystem?.csoundEngine;
++    const id = engine?._pulvisScopes?.get(panel.moduleId + ':display');
++    if (!id || engine.state !== 'running') return;
++    const { root, scale, mode } = effectivePitchSettings(panel);
++    const controls = {
++        scale,
++        scalemode: mode,
++        keyroot: panel.pulvisKeyRoot || 0,
++        srcroot: root,
++        sync: panel.pulvisSync || 0,
++        tone: panel.pulvisTone || 0,
++    };
++    return Promise.all(Object.entries(controls).map(([key, value]) =>
++        engine.setChannel(`pulvis_${id}_${key}`, value)));
++}
++
++function engineSettings(panel) {
++    return {
++        scale: panel.pulvisScale || 0, scaleMode: panel.pulvisScaleMode || 0,
++        keyRoot: panel.pulvisKeyRoot || 0, sync: panel.pulvisSync || 0, tone: panel.pulvisTone || 0,
++        slotRoots: { ...panel.pulvisSlotRoots }, slotDetunes: { ...panel.pulvisSlotDetunes },
++    };
++}
++
++function restoreEngineSettings(panel, settings) {
++    if (!settings || typeof settings !== 'object') return;
++    const bounded = (value, min, max) =>
++        Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : 0;
++    panel.pulvisScaleMode = panel.jsonName !== 'GrainFreeze' && settings.scaleMode === 1 ? 1 : 0;
++    const scales = panel.pulvisScaleMode ? KEY_SCALES : REL_INTERVALS;
++    panel.pulvisScale = scales.some(s => s.idx === settings.scale) ? settings.scale : (panel.pulvisScaleMode ? 5 : 0);
++    panel.pulvisKeyRoot = Math.round(bounded(settings.keyRoot, 0, 11));
++    panel.pulvisSync = Math.round(bounded(settings.sync, 0, 8));
++    panel.pulvisTone = bounded(settings.tone, -1, 1);
++    panel.pulvisSlotRoots = {};
++    panel.pulvisSlotDetunes = {};
++    for (let slot = 1; slot <= 8; slot++) {
++        const root = settings.slotRoots?.[slot];
++        if (Number.isInteger(root) && root >= 24 && root <= 96) panel.pulvisSlotRoots[slot] = root;
++        const cents = Math.round(bounded(settings.slotDetunes?.[slot], -50, 50));
++        if (cents) panel.pulvisSlotDetunes[slot] = cents;
++    }
++}
++
++export function applyPulvisEngineOption(panel, key, value) {
++    const system = panel?.parentSystem;
++    if (key === 'quality') {
++        const pref = ['auto', '0', '1', '2'].includes(String(value)) ? String(value) : 'auto';
++        try { globalThis.localStorage?.setItem(QUALITY_STORAGE_KEY, pref); } catch {}
++        system?.csoundEngine?.setChannel?.('pulvis_quality', getPulvisQuality());
++        for (const p of system?.components || []) {
++            if (p.pulvisControls) p.setDirty(true);
++        }
++        system?.forceRedraw?.();
++        return;
++    }
++    const num = Number(value) || 0;
++    if (key === 'scale') panel.pulvisScale = Math.max(0, Math.min(7, Math.round(num)));
++    else if (key === 'scaleMode') {
++        panel.pulvisScaleMode = num >= 1 ? 1 : 0;
++        const scales = panel.pulvisScaleMode ? KEY_SCALES : REL_INTERVALS;
++        if (!scales.some(s => s.idx === panel.pulvisScale)) panel.pulvisScale = panel.pulvisScaleMode ? 5 : 0;
++    } else if (key === 'keyRoot') panel.pulvisKeyRoot = ((Math.round(num) % 12) + 12) % 12;
++    else if (key === 'slotRoot') {
++        const slot = Math.max(1, Math.min(8, Math.round(readPanelVal(panel, 14, 1))));
++        panel.pulvisSlotRoots = panel.pulvisSlotRoots || {};
++        panel.pulvisSlotRoots[slot] = num > 0 ? Math.max(24, Math.min(96, Math.round(num))) : 0;
++    } else if (key === 'slotDetune') {
++        const slot = Math.max(1, Math.min(8, Math.round(readPanelVal(panel, 14, 1))));
++        panel.pulvisSlotDetunes = panel.pulvisSlotDetunes || {};
++        panel.pulvisSlotDetunes[slot] = Math.max(-50, Math.min(50, Math.round(num)));
++    } else if (key === 'sync') panel.pulvisSync = Math.max(0, Math.min(8, Math.round(num)));
++    else if (key === 'tone') panel.pulvisTone = Math.max(-1, Math.min(1, num));
++    syncPanelEngineChannels(panel);
++    panel.setDirty(true);
++    system?.forceRedraw?.();
++}
++
++function formatMidiNoteName(midi) {
++    if (!midi || midi <= 0) return '';
++    const note = NOTE_NAMES[((midi % 12) + 12) % 12];
++    const oct = Math.floor(midi / 12) - 1;
++    return `${note}${oct}`;
++}
++
++function formatOledEngineSuffix(panel, lang) {
++    const parts = [];
++    const { scale: scaleIdx, mode } = effectivePitchSettings(panel);
++    if (scaleIdx > 0) {
++        if (mode) {
++            const keyName = NOTE_NAMES[(panel.pulvisKeyRoot || 0) % 12];
++            const sc = KEY_SCALES.find(s => s.idx === scaleIdx) || KEY_SCALES[0];
++            parts.push(`${keyName} ${localize(sc.short, lang)}`);
++        } else {
++            parts.push(PULVIS_SCALES[scaleIdx]?.tag || '');
++        }
++    }
++    if (panel.pulvisSync > 0) parts.push(PULVIS_SYNCS[panel.pulvisSync]?.tag || '');
++    const clean = parts.filter(Boolean);
++    return clean.length ? ` · ${clean.join(' · ')}` : '';
++}
++
++function openPulvisNumericInput(panel, comp, spec) {
++    const system = panel?.parentSystem;
++    const canvas = system?.canvas;
++    if (!canvas || typeof document === 'undefined') return;
++    document.getElementById('pulvis-inline-input')?.remove();
++    const rect = canvas.getBoundingClientRect();
++    const scale = system.scale || 1;
++    const screenX = rect.left + (comp.x + comp.width + 2) * scale + (system.offsetX || 0);
++    const screenY = rect.top + (comp.y + 1) * scale + (system.offsetY || 0);
++    const input = document.createElement('input');
++    input.id = 'pulvis-inline-input';
++    input.type = 'number';
++    input.step = ['Wave', 'Slot', 'Seed', 'Pan'].includes(spec.csoundName) ? '1' : '0.1';
++    input.min = String(comp.min);
++    input.max = String(comp.max);
++    input.value = String(Math.round(comp.value * 100) / 100);
++    Object.assign(input.style, {
++        position: 'fixed', left: `${Math.round(screenX)}px`, top: `${Math.round(screenY)}px`,
++        width: '62px', height: '20px', padding: '0 4px', fontSize: '11px', fontFamily: MONO_FONT,
++        color: '#f8fafc', background: '#11151c', border: '1px solid #60a5fa', borderRadius: '4px',
++        outline: 'none', zIndex: '20000', boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
++    });
++    const commit = () => {
++        const parsed = Number(input.value);
++        if (Number.isFinite(parsed)) {
++            const clamped = Math.max(comp.min, Math.min(comp.max, parsed));
++            comp.setValue(['Wave', 'Slot', 'Seed'].includes(spec.csoundName) ? Math.round(clamped) : clamped);
++            panel.setDirty(true);
++            system.forceRedraw?.();
++        }
++        input.remove();
++    };
++    input.onkeydown = e => {
++        e.stopPropagation();
++        if (e.key === 'Enter') commit();
++        else if (e.key === 'Escape') input.remove();
++    };
++    input.onblur = () => input.remove();
++    document.body.appendChild(input);
++    input.focus();
++    input.select();
++}
++
++export function buildPulvisEngineMenu(system, panel, t) {
++    const wrap = document.createElement('div');
++    wrap.className = 'pulvis-engine-group';
++    wrap.style.cssText = 'border-top:1px solid rgba(255,255,255,0.08);margin-top:4px;padding-top:4px;';
++    const isFreeze = panel.jsonName === 'GrainFreeze';
++    const isSample = panel.jsonName === 'GrainSample';
++    const addSelect = (labelObj, options, currentVal, onChange) => {
++        const row = document.createElement('label');
++        row.className = 'pulvis-language';
++        row.append(t(labelObj));
++        const sel = document.createElement('select');
++        for (const [val, text] of options) sel.add(new Option(text, String(val)));
++        sel.value = String(currentVal);
++        sel.onchange = () => onChange(sel.value);
++        row.append(sel);
++        wrap.append(row);
++        return sel;
++    };
++
++    if (isSample) {
++        const slot = Math.max(1, Math.min(8, Math.round(readPanelVal(panel, 14, 1))));
++        const rootOpts = [[0, t({ en: 'Unset (Relative)', zh: '未指定（相对）', ru: 'Не задан (отн.)' })]];
++        for (let midi = 36; midi <= 83; midi++) rootOpts.push([midi, formatMidiNoteName(midi)]);
++        addSelect(
++            { en: `Slot #${slot} root`, zh: `槽 #${slot} 原音`, ru: `Тон слота #${slot}` },
++            rootOpts,
++            panel.pulvisSlotRoots?.[slot] || 0,
++            val => {
++                applyPulvisEngineOption(panel, 'slotRoot', val);
++                system.moduleContextMenu?.updateMenuContent?.();
++            },
++        );
++        if ((panel.pulvisSlotRoots?.[slot] || 0) > 0) {
++            const detRow = document.createElement('label');
++            detRow.className = 'pulvis-language';
++            const detVal = Number(panel.pulvisSlotDetunes?.[slot]) || 0;
++            const detCap = document.createElement('span');
++            detCap.textContent = `${t({ en: 'Fine', zh: '微调', ru: 'Тонк.' })} (${detVal > 0 ? '+' : ''}${detVal}c)`;
++            const detSlider = document.createElement('input');
++            detSlider.type = 'range'; detSlider.min = '-50'; detSlider.max = '50'; detSlider.step = '1';
++            detSlider.value = String(detVal);
++            detSlider.style.cssText = 'width:82px;accent-color:#d6a45b;cursor:pointer;';
++            detSlider.oninput = () => {
++                const v = Number(detSlider.value);
++                detCap.textContent = `${t({ en: 'Fine', zh: '微调', ru: 'Тонк.' })} (${v > 0 ? '+' : ''}${v}c)`;
++                applyPulvisEngineOption(panel, 'slotDetune', v);
++            };
++            detSlider.ondblclick = () => {
++                detSlider.value = '0';
++                detCap.textContent = `${t({ en: 'Fine', zh: '微调', ru: 'Тонк.' })} (0c)`;
++                applyPulvisEngineOption(panel, 'slotDetune', 0);
++            };
++            detRow.append(detCap, detSlider);
++            wrap.append(detRow);
++        }
++    }
++
++    if (isFreeze) {
++        addSelect(
++            { en: 'Interval quantize', zh: '移调音程', ru: 'Интервалы' },
++            REL_INTERVALS.map(r => [r.idx, t(r)]),
++            panel.pulvisScale || 0,
++            val => applyPulvisEngineOption(panel, 'scale', val),
++        );
++    } else {
++        const canKeyLock = panel.jsonName === 'GrainOsc' || getActiveSampleSourceRoot(panel) > 0;
++        const modeOpts = [
++            [0, t({ en: 'Relative interval', zh: '相对音程', ru: 'Отн. интервал' })],
++            ...(canKeyLock ? [[1, t({ en: 'Lock to key', zh: '锁定到调', ru: 'В тональность' })]] : []),
++        ];
++        const activeMode = canKeyLock && panel.pulvisScaleMode === 1 ? 1 : 0;
++        addSelect(
++            { en: 'Pitch quantize', zh: '音高量化', ru: 'Квантизация' },
++            modeOpts,
++            activeMode,
++            val => {
++                applyPulvisEngineOption(panel, 'scaleMode', val);
++                system.moduleContextMenu?.updateMenuContent?.();
++            },
++        );
++        if (activeMode === 1) {
++            addSelect(
++                { en: 'Key root', zh: '主音', ru: 'Тоника' },
++                NOTE_NAMES.map((n, i) => [i, n]),
++                panel.pulvisKeyRoot || 0,
++                val => applyPulvisEngineOption(panel, 'keyRoot', val),
++            );
++            addSelect(
++                { en: 'Scale', zh: '音阶', ru: 'Лад' },
++                KEY_SCALES.map(s => [s.idx, t(s)]),
++                KEY_SCALES.some(s => s.idx === panel.pulvisScale) ? panel.pulvisScale : 5,
++                val => applyPulvisEngineOption(panel, 'scale', val),
++            );
++        } else {
++            addSelect(
++                { en: 'Interval', zh: '音程', ru: 'Интервал' },
++                REL_INTERVALS.map(r => [r.idx, t(r)]),
++                REL_INTERVALS.some(r => r.idx === panel.pulvisScale) ? panel.pulvisScale : 0,
++                val => applyPulvisEngineOption(panel, 'scale', val),
++            );
++        }
++    }
++
++    addSelect(
++        { en: 'Tempo sync', zh: '节拍同步', ru: 'Синхр. BPM' },
++        PULVIS_SYNCS.map((opt, idx) => [idx, t(opt)]),
++        panel.pulvisSync || 0,
++        val => applyPulvisEngineOption(panel, 'sync', val),
++    );
++    if (isFreeze) {
++        const toneRow = document.createElement('label');
++        toneRow.className = 'pulvis-language';
++        const toneVal = Number(panel.pulvisTone) || 0;
++        const toneCaption = document.createElement('span');
++        const fmtTone = v => `${v > 0 ? '+' : ''}${Math.round(v * 100)}%`;
++        toneCaption.textContent = `${t({ en: 'Wet tone', zh: '湿声音色', ru: 'Тон влажн.' })} (${fmtTone(toneVal)})`;
++        const slider = document.createElement('input');
++        slider.type = 'range';
++        slider.min = '-100';
++        slider.max = '100';
++        slider.step = '5';
++        slider.value = String(Math.round(toneVal * 100));
++        slider.style.cssText = 'width:82px;accent-color:#9e82c8;cursor:pointer;';
++        slider.oninput = () => {
++            const v = Number(slider.value) / 100;
++            toneCaption.textContent = `${t({ en: 'Wet tone', zh: '湿声音色', ru: 'Тон влажн.' })} (${fmtTone(v)})`;
++            applyPulvisEngineOption(panel, 'tone', v);
++        };
++        slider.ondblclick = () => {
++            slider.value = '0';
++            toneCaption.textContent = `${t({ en: 'Wet tone', zh: '湿声音色', ru: 'Тон влажн.' })} (0%)`;
++            applyPulvisEngineOption(panel, 'tone', 0);
++        };
++        toneRow.append(toneCaption, slider);
++        wrap.append(toneRow);
++    }
++    const hw = detectHardwareQuality();
++    addSelect(
++        { en: 'CPU mode', zh: '性能模式', ru: 'Режим CPU' },
++        PULVIS_QUALITIES.map(opt => [opt.value, opt.value === 'auto' ? `${t(opt)} → ${['BAL', 'ECO', 'HQ'][hw.tier]}` : t(opt)]),
++        getPulvisQualityPreference(),
++        val => applyPulvisEngineOption(panel, 'quality', val),
++    );
++    return wrap;
++}
 +
 +function parseHexRgb(color, fallback = [108, 170, 210]) {
 +    if (typeof color !== 'string') return fallback;
@@ -2384,6 +2790,16 @@ index 0000000..8d6c816
 +    const slotsMap = engine.grainSamples.slots;
 +    const activeEntry = slotsMap.get(activeSlot);
 +    const isSample = modName === 'GrainSample';
++    const oledHover = panel._pulvisOledHover || null;
++    if (modName === 'GrainFreeze' && frame) {
++        const snapSerial = frame[661] || 0;
++        if (panel._pulvisSnapSerial === undefined) panel._pulvisSnapSerial = snapSerial;
++        else if (snapSerial > panel._pulvisSnapSerial) {
++            panel._pulvisSnapSerial = snapSerial;
++            panel._pulvisSnapFlashUntil = performance.now() + 950;
++        }
++    }
++    const snapFlashing = modName === 'GrainFreeze' && performance.now() < (panel._pulvisSnapFlashUntil || 0);
 +    if (isSample) {
 +        const slotW = 19;
 +        const slotGap = 2;
@@ -2392,13 +2808,14 @@ index 0000000..8d6c816
 +            const sy = oy + 4;
 +            const isSel = s === activeSlot;
 +            const isLoaded = Boolean(slotsMap?.get?.(s));
-+            ctx.fillStyle = isSel ? hexToRgba(palette.accent, 0.24) : isLoaded ? '#172220' : '#161a22';
++            const isHov = oledHover === `slot-${s}`;
++            ctx.fillStyle = isSel ? hexToRgba(palette.accent, 0.24) : isHov ? '#1e2430' : isLoaded ? '#172220' : '#161a22';
 +            fillRoundedPath(ctx, sx, sy, slotW, 13, 2.5);
-+            ctx.strokeStyle = isSel ? palette.accent : isLoaded ? '#49997b' : 'rgba(255, 255, 255, 0.09)';
++            ctx.strokeStyle = isSel ? palette.accent : isHov ? hexToRgba(palette.accent, 0.72) : isLoaded ? '#49997b' : 'rgba(255, 255, 255, 0.09)';
 +            ctx.lineWidth = isSel ? 1.2 : 0.9;
 +            strokeRoundedPath(ctx, sx + 0.5, sy + 0.5, slotW - 1, 12, 2.5);
 +
-+            ctx.fillStyle = isSel ? '#f4f7fa' : isLoaded ? '#86cfa8' : '#8590a2';
++            ctx.fillStyle = isSel ? '#f4f7fa' : isLoaded ? '#86cfa8' : isHov ? '#cbd5e1' : '#8590a2';
 +            ctx.font = `600 9px ${MONO_FONT}`;
 +            ctx.textAlign = 'center';
 +            ctx.textBaseline = 'middle';
@@ -2409,9 +2826,11 @@ index 0000000..8d6c816
 +        ctx.textAlign = 'right';
 +        ctx.textBaseline = 'middle';
 +        ctx.fillStyle = activeEntry ? palette.valueText : palette.mutedText;
-+        const sampleInfo = frame && frame[659] === activeSlot && activeEntry
++        const slotRootTag = panel.pulvisSlotRoots?.[activeSlot] ? ` · ${formatMidiNoteName(panel.pulvisSlotRoots[activeSlot])}` : '';
++        const sampleBase = frame && frame[659] === activeSlot && activeEntry
 +            ? `${activeEntry.name} · ${frame[657].toFixed(2)}s · ${(frame[658] / 1000).toFixed(1)}k`
 +            : activeEntry?.name || tr('Empty', '空槽', 'Пусто');
++        const sampleInfo = sampleBase + slotRootTag + formatOledEngineSuffix(panel, lang);
 +        ctx.fillText(sampleInfo, scopeX + scopeW, oy + 11, scopeW - 172);
 +    } else {
 +        const isOsc = modName === 'GrainOsc';
@@ -2420,13 +2839,18 @@ index 0000000..8d6c816
 +            : frame ? (frame[11] ? tr('Snapshot', '快照', 'Снимок') : tr('Live', '实时', 'Вход'))
 +                : panel.pulvisControls.get('Source').currentItem;
 +        ctx.font = `600 10px ${UI_FONT}`;
-+        ctx.fillStyle = palette.accentSoft;
++        ctx.fillStyle = oledHover === 'source' ? '#f8fafc' : palette.accentSoft;
 +        ctx.textAlign = 'left';
 +        ctx.textBaseline = 'middle';
 +        const pitch = frame && pitchToNoteAndHz(frame[10]);
 +        const detail = isOsc && frame ? ` · ${pitch.note} ${pitch.hz} · ${frame[659] ? [24,12,6,3,1][frame[660]] : 1}H` : '';
-+        ctx.fillText(source + detail, scopeX, oy + 11, scopeW * 0.56);
-+        if (frame) {
++        const leftText = source + detail + formatOledEngineSuffix(panel, lang);
++        ctx.fillText(leftText, scopeX, oy + 11, scopeW * 0.62);
++        if (snapFlashing) {
++            ctx.fillStyle = '#6ee7b7';
++            ctx.textAlign = 'right';
++            ctx.fillText(tr('✓ Captured', '✓ 快照已存', '✓ Снимок сохранён'), scopeX + scopeW, oy + 11, scopeW * 0.44);
++        } else if (frame) {
 +            const state = frame[9] >= 0.5 ? tr('Hold', '锁定', 'Удерж.')
 +                : isOsc ? tr('Warp', '扭曲', 'Изгиб') : tr('Record', '录入', 'Запись');
 +            ctx.textAlign = 'right';
@@ -2439,12 +2863,13 @@ index 0000000..8d6c816
 +        const btnW = 160;
 +        const btnX = scopeX + Math.round((scopeW - btnW) / 2);
 +        const label = tr('Open WAV…', '导入 WAV…', 'Открыть WAV…');
-+        ctx.fillStyle = '#1b2029';
++        const btnHov = oledHover === 'open-wav';
++        ctx.fillStyle = btnHov ? '#232a36' : '#1b2029';
 +        fillRoundedPath(ctx, btnX, scopeY + 6, btnW, 20, 4);
-+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
++        ctx.strokeStyle = btnHov ? hexToRgba(palette.accent, 0.68) : 'rgba(255, 255, 255, 0.14)';
 +        ctx.lineWidth = 1;
 +        strokeRoundedPath(ctx, btnX + 0.5, scopeY + 6.5, btnW - 1, 19, 4);
-+        ctx.fillStyle = palette.accentSoft;
++        ctx.fillStyle = btnHov ? '#f8fafc' : palette.accentSoft;
 +        ctx.font = `600 9.5px ${UI_FONT}`;
 +        ctx.textAlign = 'center';
 +        ctx.textBaseline = 'middle';
@@ -2455,10 +2880,34 @@ index 0000000..8d6c816
 +            drawSpectrum(ctx, bins, frame[12], scopeX, scopeY, scopeW, scopeH, palette);
 +        } else if (!fft && frame?.[6] && (!isSample || frame[659] === activeSlot)) {
 +            drawSource(ctx, frame, engine.getScopeBuffer(panel.moduleId), modName, scopeX, scopeY, scopeW, scopeH, palette);
++            if (panel._pulvisOledDragging) {
++                const posKnob = panel.pulvisControls.get('Position') || panel.pulvisControls.get('PhaseWarp');
++                if (posKnob) {
++                    const pct = Math.round((posKnob.value / 127) * 100);
++                    const scrubText = modName === 'GrainFreeze'
++                        ? `${pct}% (-${((posKnob.value / 127) * 8).toFixed(2)}s)`
++                        : isSample && frame[657] > 0
++                            ? `${pct}% (${((posKnob.value / 127) * frame[657]).toFixed(2)}s)`
++                            : `${pct}%`;
++                    ctx.font = `600 9px ${MONO_FONT}`;
++                    const pillW = ctx.measureText(scrubText).width + 12;
++                    const pillX = scopeX + Math.round((scopeW - pillW) / 2);
++                    const pillY = scopeY + 2;
++                    ctx.fillStyle = 'rgba(10, 12, 16, 0.86)';
++                    fillRoundedPath(ctx, pillX, pillY, pillW, 14, 3);
++                    ctx.strokeStyle = hexToRgba(palette.accent, 0.6);
++                    ctx.lineWidth = 1;
++                    strokeRoundedPath(ctx, pillX + 0.5, pillY + 0.5, pillW - 1, 13, 3);
++                    ctx.fillStyle = '#f8fafc';
++                    ctx.textAlign = 'center';
++                    ctx.textBaseline = 'middle';
++                    ctx.fillText(scrubText, pillX + pillW / 2, pillY + 7.2);
++                }
++            }
 +        } else {
 +            const status = !running ? (engine.state === 'error' ? tr('Csound error', 'Csound 错误', 'Ошибка Csound')
 +                : tr('Csound stopped', 'Csound 已停止', 'Csound остановлен'))
-+                : frame && !frame[6] ? tr('No snapshot captured', '尚未捕捉快照', 'Нет снимка')
++                : frame && !frame[6] ? tr('No snapshot', '尚未捕捉快照', 'Нет снимка')
 +                : tr('Waiting for Csound', '等待读取 Csound', 'Ожидание Csound');
 +            ctx.fillStyle = palette.mutedText;
 +            ctx.font = `500 10px ${UI_FONT}`;
@@ -2479,7 +2928,7 @@ index 0000000..8d6c816
 +    const ex = envX + 2;
 +    const ey = oy + 20;
 +
-+    ctx.fillStyle = palette.mutedText;
++    ctx.fillStyle = oledHover === 'window' ? palette.accentSoft : palette.mutedText;
 +    ctx.font = `600 9px ${UI_FONT}`;
 +    ctx.textAlign = 'left';
 +    ctx.textBaseline = 'middle';
@@ -2593,20 +3042,18 @@ index 0000000..8d6c816
 +            ctx.fillText(this.text, panel.pixelX + 460, panel.pixelY + 280.5, 16);
 +        } else {
 +            ctx.textAlign = 'left';
-+            ctx.fillText(this.text, panel.pixelX + 20, panel.pixelY + 280.5, 76);
++            ctx.fillText(this.text, panel.pixelX + 20, panel.pixelY + 280.5, 45);
 +        }
 +        ctx.restore();
 +        return;
 +    }
 +
 +    // Parameter labels: crisp weight + 68px maxWidth keeps a clean >=8px gutter between all columns.
-+    // Freeze's Feedback label (id 316) spans above the unlabelled Capture button, so it has wide clearance.
-+    const maxW = (panel.jsonName === 'GrainFreeze' && idNum === 316) ? 136 : 68;
 +    ctx.font = `600 9.8px ${UI_FONT}`;
 +    ctx.fillStyle = palette.labelText;
 +    ctx.textAlign = this.align || 'left';
 +    ctx.textBaseline = this.baseline || 'top';
-+    ctx.fillText(this.text, this.x, this.y - 1, maxW);
++    ctx.fillText(this.text, this.x, this.y - 1, 68);
 +    ctx.restore();
 +}
 +
@@ -2713,30 +3160,41 @@ index 0000000..8d6c816
 +
 +function drawButtonText(ctx) {
 +    const palette = getPulvisPalette(this.parent);
-+    const by = this.y - 1;
-+    const bh = this.height + 2;
++    const snapFlashing = this.csoundName === 'Capture' && performance.now() < (this.parent?._pulvisSnapFlashUntil || 0);
++    const by = this.y;
++    const bh = this.height;
 +    ctx.save();
-+    ctx.fillStyle = (this.isActive || this.isPressed)
-+        ? palette.controlBgActive
-+        : this.isHovered
-+            ? palette.controlBgHover
-+            : palette.controlBg;
-+    fillRoundedPath(ctx, this.x, by, this.width, bh, 4);
++    ctx.fillStyle = snapFlashing
++        ? 'rgba(16, 185, 129, 0.24)'
++        : (this.isActive || this.isPressed)
++            ? palette.controlBgActive
++            : this.isHovered
++                ? palette.controlBgHover
++                : palette.controlBg;
++    fillRoundedPath(ctx, this.x, by, this.width, bh, 3.5);
 +
-+    ctx.strokeStyle = (this.isActive || this.isHovered) ? palette.sectionAccent : hexToRgba(palette.sectionAccent, 0.55);
++    ctx.strokeStyle = snapFlashing
++        ? '#6ee7b7'
++        : (this.isActive || this.isHovered) ? palette.sectionAccent : hexToRgba(palette.sectionAccent, 0.55);
 +    ctx.lineWidth = 1.1;
-+    strokeRoundedPath(ctx, this.x + 0.5, by + 0.5, this.width - 1, bh - 1, 4);
++    strokeRoundedPath(ctx, this.x + 0.5, by + 0.5, this.width - 1, bh - 1, 3.5);
 +
 +    // Keep full text on the component model while displaying a crisp, legible button caption.
 +    const rawText = this.text || '';
-+    const btnText = rawText === 'Сохранить снимок'
++    const lang = this.parent?.uiLanguage || getUiLanguage();
++    const baseText = rawText === 'Сохранить снимок'
 +        ? 'Снимок'
 +        : rawText === 'Capture snapshot'
 +            ? 'Capture'
-+            : rawText;
++            : rawText === '捕捉快照'
++                ? '捕捉'
++                : rawText;
++    const btnText = snapFlashing
++        ? (lang === 'zh' ? '✓ 已存' : lang === 'ru' ? '✓ Готово' : '✓ Saved')
++        : baseText;
 +    const innerW = this.width - 8;
-+    ctx.font = `600 10px ${UI_FONT}`;
-+    ctx.fillStyle = '#f1f5f9';
++    ctx.font = `600 9.8px ${UI_FONT}`;
++    ctx.fillStyle = snapFlashing ? '#a7f3d0' : '#f1f5f9';
 +    ctx.textAlign = 'center';
 +    ctx.textBaseline = 'middle';
 +    ctx.fillText(btnText, this.x + this.width / 2, by + bh / 2 + 0.3, innerW);
@@ -2788,7 +3246,9 @@ index 0000000..8d6c816
 +    const aVal = aStart + norm * Math.PI * 1.5;
 +    const aOrigin = (this.min < 0 && this.max > 0)
 +        ? aStart + ((0 - this.min) / span) * Math.PI * 1.5
-+        : aStart;
++        : this.showCenterIndicator
++            ? aStart + ((64 - this.min) / span) * Math.PI * 1.5
++            : aStart;
 +    if (Math.abs(aVal - aOrigin) > 0.03) {
 +        ctx.beginPath();
 +        ctx.arc(cx, cy, r + 0.5, Math.min(aOrigin, aVal), Math.max(aOrigin, aVal));
@@ -2798,14 +3258,14 @@ index 0000000..8d6c816
 +        ctx.stroke();
 +    }
 +
-+    // Subtle zero-detent pip tucked onto the arc rim (never overlaps the parameter label above).
-+    if (this.showZeroIndicator) {
-+        const isZero = Math.abs(this.value) < 0.5;
++    // Subtle zero/center-detent pip tucked onto the arc rim (never overlaps the parameter label above).
++    if (this.showZeroIndicator || this.showCenterIndicator) {
++        const isDetent = this.showCenterIndicator ? Math.abs(this.value - 64) < 0.6 : Math.abs(this.value) < 0.5;
 +        const zx = cx + Math.cos(aOrigin) * (r + 0.5);
 +        const zy = cy + Math.sin(aOrigin) * (r + 0.5);
 +        ctx.beginPath();
-+        ctx.arc(zx, zy, isZero ? 1.8 : 1.3, 0, Math.PI * 2);
-+        ctx.fillStyle = isZero ? palette.accentSoft : 'rgba(255, 255, 255, 0.28)';
++        ctx.arc(zx, zy, isDetent ? 1.8 : 1.3, 0, Math.PI * 2);
++        ctx.fillStyle = isDetent ? palette.accentSoft : 'rgba(255, 255, 255, 0.28)';
 +        ctx.fill();
 +    }
 +
@@ -2835,12 +3295,19 @@ index 0000000..8d6c816
 +    ctx.stroke();
 +    ctx.restore();
 +
++    if (this.midiMapping) {
++        ctx.beginPath();
++        ctx.arc(cx + r - 1.5, cy - r + 1.5, 2.5, 0, Math.PI * 2);
++        ctx.fillStyle = '#f59e0b';
++        ctx.fill();
++    }
++
 +    ctx.restore();
 +}
 +
 +function drawTooltip(ctx) {
-+    const palette = getPulvisPalette(this.parent);
-+    const valueText = formatPulvisKnobValue(this, this.parent, true);
++    const panel = this.parent, palette = getPulvisPalette(panel);
++    const valueText = formatPulvisKnobValue(this, panel, true);
 +    ctx.save();
 +    ctx.font = `600 11px ${UI_FONT}`;
 +    ctx.textAlign = 'center';
@@ -2848,7 +3315,7 @@ index 0000000..8d6c816
 +    const padding = 9;
 +    const h = 23;
 +    const w = ctx.measureText(valueText).width + padding * 2;
-+    const tx = this.x + this.width / 2;
++    const tx = panel?.pixelX != null ? Math.max(panel.pixelX + w / 2 + 4, Math.min(panel.pixelX + panel.width - w / 2 - 4, this.x + this.width / 2)) : this.x + this.width / 2;
 +    const ty = this.y - h - 8;
 +
 +    ctx.fillStyle = 'rgba(15, 18, 24, 0.96)';
@@ -2886,12 +3353,41 @@ index 0000000..8d6c816
 +const drawControl = { Knob: drawKnob, TextLabel: drawTextLabel, ButtonIncDec: drawButtonIncDec,
 +    ButtonText: drawButtonText, Input: drawInput, Output: drawOutput, Line() {} };
 +
++function hitTestOled(panel, x, y) {
++    const relX = x - panel.pixelX, relY = y - panel.pixelY;
++    if (relX < 10 || relX > 490 || relY < 32 || relY > 90) return null;
++    const controls = panel.pulvisControls;
++    if (relX >= 356) return 'window';
++    if (relY < 52) {
++        if (controls.has('Slot')) {
++            const slotX = relX - 20;
++            if (relY >= 36 && relY <= 49 && slotX >= 0 && slotX < 168 && slotX % 21 < 19)
++                return `slot-${Math.floor(slotX / 21) + 1}`;
++        } else if (relX < 200) {
++            return 'source';
++        }
++    } else if (relX >= 20 && relX <= 342 && !panel.pulvisFft) {
++        const slot = Math.round(controls.get('Slot')?.getValue());
++        if (slot && !panel.parentSystem?.csoundEngine?.grainSamples?.slots?.has(slot)) {
++            if (relY >= 58 && relY <= 78 && relX >= 101 && relX <= 261) return 'open-wav';
++        } else {
++            return 'waveform';
++        }
++    }
++    return null;
++}
++
 +function handleDisplay(panel, x, y) {
 +    const relX = x - panel.pixelX, relY = y - panel.pixelY;
 +    if (panel.parentSystem.locked) return null;
 +    if (relX < 10 || relX > 490 || relY < 32 || relY > 90) return null;
 +    const controls = panel.pulvisControls;
-+    const action = { type: 'component-drag', endDrag() {} };
++    const action = { type: 'component-drag', endDrag() {
++        if (panel._pulvisOledDragging) {
++            panel._pulvisOledDragging = false;
++            panel.setDirty(true);
++        }
++    } };
 +    if (relX >= 356) {
 +        const selector = controls.get('Window');
 +        selector.setValue((selector.currentIndex + 1) % selector.items.length);
@@ -2904,7 +3400,7 @@ index 0000000..8d6c816
 +            const selector = controls.get('Wave') || controls.get('Source');
 +            selector.setValue((Math.round(selector.getValue()) + 1) % (controls.has('Wave') ? 4 : 2));
 +        }
-+    } else {
++    } else if (relX >= 20 && relX <= 342) {
 +        if (panel.pulvisFft) return action;
 +        const system = panel.parentSystem;
 +        const slot = Math.round(controls.get('Slot')?.getValue());
@@ -2914,6 +3410,7 @@ index 0000000..8d6c816
 +            }
 +        } else {
 +            const knob = controls.get('Position') || controls.get('PhaseWarp');
++            panel._pulvisOledDragging = true;
 +            action.handleDrag = worldX => {
 +                const pos = Math.max(0, Math.min(1, (worldX - panel.pixelX - 20) / (panel.width - 178)));
 +                const frame = system.csoundEngine.state === 'running' && system.csoundEngine.getScopeBuffer(panel.moduleId + ':display');
@@ -2936,23 +3433,40 @@ index 0000000..8d6c816
 +    panel.jsonName = definition.type;
 +    panel.uiLanguage = definition.uiLanguage;
 +    panel.pulvisControls = new Map();
++    panel.syncPulvisChannels = () => syncPanelEngineChannels(panel);
++    panel.getPulvisSettings = () => engineSettings(panel);
++    panel.restorePulvisSettings = settings => restoreEngineSettings(panel, settings);
 +    for (const comp of panel.components) {
 +        const spec = definition.components.find(item => String(item.id) === comp.id);
-+        if (spec.connectorNameI18n) comp.label = spec.ConnectorName;
++        if (spec.connectorNameI18n) comp.label = spec.ConnectorName; if (spec.showZeroIndicator || spec.snapping) comp.showZeroIndicator = true;
++        if (spec.csoundName === 'Pan') comp.showCenterIndicator = true;
 +        if (spec.csoundName) {
 +            comp.csoundName = spec.csoundName;
 +            panel.pulvisControls.set(spec.csoundName, comp);
 +        }
 +        if (drawControl[spec.componentType]) comp.draw = drawControl[spec.componentType];
++        if (spec.componentType === 'ButtonIncDec') { comp.height = comp.originalHeight = 16; comp.arrowWidth = 11; comp.arrowHeight = 7; comp.arrowPadding = -4; comp.onChange = () => panel.setDirty(true); }
++        if (spec.componentType === 'ButtonText') { comp.onToggle = () => panel.setDirty(true); }
 +        if (spec.componentType === 'Knob') {
++            const hitWidth = comp.width + 2 + (spec.csoundName === 'Seed' ? 42 : 31);
++            comp.isPointInside = (x, y) => x >= comp.x - 1 && x <= comp.x + hitWidth && y >= comp.y - 1 && y <= comp.y + comp.height + 1;
++            comp.onChange = () => {
++                if (spec.csoundName === 'Slot') syncPanelEngineChannels(panel);
++                panel.setDirty(true);
++            };
 +            comp.drawTooltip = drawTooltip;
 +            const click = comp.handleClick.bind(comp);
 +            comp.handleClick = (x, y) => {
 +                if (comp.isPointInside(x, y)) {
++                    if (pulvisAltPressed) {
++                        openPulvisNumericInput(panel, comp, spec);
++                        return {type:'component-drag', endDrag() {}};
++                    }
 +                    const now = performance.now();
 +                    if (now - (comp.lastPulvisClick ?? -Infinity) < 320) {
 +                        comp.lastPulvisClick = -Infinity;
 +                        comp.setValue(spec.defaultValue);
++                        panel.setDirty(true);
 +                        return {type:'component-drag', endDrag() {}};
 +                    }
 +                    comp.lastPulvisClick = now;
@@ -2966,12 +3480,30 @@ index 0000000..8d6c816
 +                    previousY = worldY;
 +                    const discrete = ['Wave', 'Slot', 'Seed'].includes(spec.csoundName)
 +                        || (!fine && ['Pitch', 'PitchJitter'].includes(spec.csoundName));
-+                    comp.setValue(discrete ? Math.round(rawValue) : rawValue);
++                    let nextValue = discrete ? Math.round(rawValue) : rawValue;
++                    if (!fine) {
++                        if (spec.csoundName === 'Level' && Math.abs(rawValue) < 0.75) nextValue = 0;
++                        else if (spec.csoundName === 'Scan' && Math.abs(rawValue) < 3.0) nextValue = 0;
++                        else if (spec.csoundName === 'Pan' && Math.abs(rawValue - 64) < 2.0) nextValue = 64;
++                    }
++                    comp.setValue(nextValue);
++                    panel.setDirty(true);
 +                };
 +                return drag;
 +            };
 +        }
 +    }
++    const onMove = panel.handleMouseMove.bind(panel);
++    panel.handleMouseMove = (x, y) => {
++        const prev = panel.components.map(c => (c.isHovered ? 1 : 0) | (c.showTooltip ? 2 : 0));
++        const prevOledHover = panel._pulvisOledHover || null;
++        onMove(x, y);
++        panel._pulvisOledHover = hitTestOled(panel, x, y);
++        if (panel._pulvisOledHover !== prevOledHover
++            || panel.components.some((c, i) => ((c.isHovered ? 1 : 0) | (c.showTooltip ? 2 : 0)) !== prev[i])) {
++            panel.setDirty(true);
++        }
++    };
 +    const startDrag = panel.startDrag.bind(panel);
 +    panel.startDrag = (x, y, system) => handleDisplay(panel, x, y) || startDrag(x, y, system);
 +    panel.draw = function(ctx) {
@@ -3014,6 +3546,7 @@ index 0000000..8d6c816
 +    }
 +    system.forceRedraw();
 +}
++switchPulvisLanguage.buildEngineMenu = buildPulvisEngineMenu;
 diff --git a/src/ui/module-menu.css b/src/ui/module-menu.css
 new file mode 100644
 index 0000000..e5b412c

@@ -10,7 +10,7 @@ $moduleIndex = Join-Path $PluginDir '_index.json'
 $marker = Join-Path $PluginDir '_pulvis-library-registration-before-install'
 $inventory = Join-Path $PluginDir '_pulvis-installed-sha256.json'
 $moduleIds = @('GrainFreeze','GrainSample','GrainOsc')
-$owned = @('_meta.json','README.md','README.zh-CN.md','README.ru.md','LICENSE','assets/pulvis-icon.png','assets/pulvis-social-preview.png','assets/pulvis-header-zh-CN.png','assets/pulvis-header-ru.png','examples/pulvis-demo.json')
+$owned = @('_meta.json','README.md','README.zh-CN.md','README.ru.md','LICENSE','assets/pulvis-icon.png', 'assets/pulvis-header-en.png','assets/pulvis-social-preview.png','assets/pulvis-header-zh-CN.png','assets/pulvis-header-ru.png','examples/pulvis-demo.json')
 foreach ($id in $moduleIds) { $owned += @("modules/$id.js", "modules/$id.txt") }
 function Read-Index($Path, $Property) {
     $obj = ConvertFrom-Json -InputObject ([IO.File]::ReadAllText($Path))
@@ -60,6 +60,23 @@ $prior = if ($hasMarker) { [IO.File]::ReadAllText($marker).Trim() }
     else { 'none' }
 if ($prior -cnotin @('none','granular','pulvis')) { throw 'Invalid Pulvis registration record' }
 if ($Action -eq 'install') {
+    $manifestPath = Join-Path $PayloadDir '_manifest.sha256.json'
+    if ([IO.File]::Exists($manifestPath)) {
+        $manifest = ConvertFrom-Json -InputObject ([IO.File]::ReadAllText($manifestPath))
+        $sha = [Security.Cryptography.SHA256]::Create()
+        try {
+            foreach ($prop in $manifest.files.PSObject.Properties) {
+                $leaf = [IO.Path]::GetFileName($prop.Name)
+                $candidate = Join-Path $PayloadDir $leaf
+                if ([IO.File]::Exists($candidate)) {
+                    $actual = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($candidate))).Replace('-', '').ToLowerInvariant()
+                    if ($actual -cne $prop.Value) {
+                        throw "Integrity check failed: $($prop.Name) has been modified. Installation aborted."
+                    }
+                }
+            }
+        } finally { $sha.Dispose() }
+    }
     $payload = Read-Index (Join-Path $PayloadDir '_index.json') 'modules'
     $modules.modules = $others + $payload.modules
     if ($prior -ceq 'granular') {
@@ -86,10 +103,11 @@ function Ensure-Directory($Dir) {
     $createdDirs.Add($Dir)
 }
 $core = Join-Path (Split-Path -Parent (Split-Path -Parent $PluginDir)) 'csound/modules/GrainCore.txt'
+$hostDemo = Join-Path (Split-Path -Parent (Split-Path -Parent $PluginDir)) 'patches/pulvis-demo.json'
 try {
     if ($Action -eq 'install') {
-        foreach ($name in ($owned + 'GrainCore.txt')) {
-            $file = if ($name -eq 'GrainCore.txt') { $core } else { Join-Path $PluginDir $name }
+        foreach ($name in ($owned + 'GrainCore.txt' + 'patches/pulvis-demo.json')) {
+            $file = if ($name -eq 'GrainCore.txt') { $core } elseif ($name -eq 'patches/pulvis-demo.json') { $hostDemo } else { Join-Path $PluginDir $name }
             $content = [IO.File]::ReadAllBytes((Join-Path $PayloadDir ([IO.Path]::GetFileName($name))))
             Ensure-Directory ([IO.Path]::GetDirectoryName($file))
             $old = if ([IO.File]::Exists($file)) { ,([IO.File]::ReadAllBytes($file)) }

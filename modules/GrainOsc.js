@@ -9,17 +9,17 @@ export const GrainOscModule = {
     "category": "osc",
     "status": "passable",
     "pulvisStudio": true,
-    "pulvisVersion": "0.0.5",
+    "pulvisVersion": "0.0.6",
     "width": 500,
     "height": 300,
     "gridHeight": 20,
     "originalName": "GrainOsc",
     "defaultParams": [],
-    "tooltip": "Grain generator with a built-in wave (sine, triangle, saw or square), no input needed. Pitch 0 = 220 Hz (A3). Phase warp reshapes phase progression within each cycle; phase jitter varies each grain start. Forward/reverse changes grain direction. Time scatter independently varies trigger times while keeping their mean rate. Seed repeats both random sequences. Up to 64 grains at once. Small jacks beside knobs add modulation.",
+    "tooltip": "Grain generator with a built-in wave (sine, triangle, saw or square), no input needed. Pitch 0 = 220 Hz (A3). Phase warp reshapes phase progression within each cycle; phase jitter varies each grain start. Time scatter independently varies trigger times while keeping their mean rate. Seed repeats both random sequences. Right-click for pitch quantization, tempo sync, and spectrum view. Up to 64 grains at once.",
     "tooltipI18n": {
-        "en": "Grain generator with a built-in wave (sine, triangle, saw or square), no input needed. Pitch 0 = 220 Hz (A3). Phase warp reshapes phase progression within each cycle; phase jitter varies each grain start. Forward/reverse changes grain direction. Time scatter independently varies trigger times while keeping their mean rate. Seed repeats both random sequences. Up to 64 grains at once. Small jacks beside knobs add modulation.",
-        "zh": "内置正弦、三角、锯齿或方波的颗粒发生器，无需输入。音高 0 = 220 Hz（A3）。相位扭曲改变周期内的相位推进；相位抖动改变每颗粒起始相位。正向／反向改变颗粒方向。时间散布独立改变触发时刻，同时保持平均粒速。Seed 可复现两组随机序列。最多同时 64 个颗粒；旋钮旁的小插孔可叠加调制。",
-        "ru": "Генератор гранул со встроенной синусоидой, треугольником, пилой или меандром. Высота 0 = 220 Гц (A3). Деформация меняет ход фазы, разброс фазы — старт гранулы. Направление «вперёд/назад» меняет ход гранулы. Разброс времени независимо меняет моменты запуска, сохраняя среднюю плотность. Seed повторяет обе случайные последовательности. До 64 гранул одновременно. Малые гнёзда принимают CV."
+        "en": "Grain generator with a built-in wave (sine, triangle, saw or square), no input needed. Pitch 0 = 220 Hz (A3). Phase warp reshapes phase progression within each cycle; phase jitter varies each grain start. Time scatter independently varies trigger times while keeping their mean rate. Seed repeats both random sequences. Right-click for pitch quantization, tempo sync, and spectrum view. Up to 64 grains at once.",
+        "zh": "内置正弦、三角、锯齿或方波的颗粒发生器，无需输入。音高 0 = 220 Hz（A3）。相位扭曲改变周期内的相位推进；相位抖动改变每颗粒起始相位。时间散布独立改变触发时刻，同时保持平均粒速。Seed 可复现两组随机序列。右键菜单支持音高量化（锁定到调）、节拍同步与频谱视图。最多同时 64 个颗粒。",
+        "ru": "Генератор гранул со встроенной синусоидой, треугольником, пилой или меандром. Высота 0 = 220 Гц (A3). Деформация меняет ход фазы, разброс фазы — старт гранулы. Разброс времени независимо меняет моменты запуска, сохраняя среднюю плотность. Seed повторяет обе случайные последовательности. ПКМ — квантизация высоты, синхронизация BPM и спектр. До 64 гранул одновременно."
     },
     "params": [
         1,
@@ -35,8 +35,7 @@ export const GrainOscModule = {
         12,
         13,
         14,
-        15,
-        16
+        15
     ],
     "inputs": [
         102,
@@ -50,8 +49,7 @@ export const GrainOscModule = {
         110,
         111,
         113,
-        115,
-        116
+        115
     ],
     "outputs": [
         201,
@@ -282,6 +280,7 @@ export const GrainOscModule = {
             "max": 48,
             "defaultValue": 0,
             "snapping": true,
+            "showZeroIndicator": true,
             "csoundName": "Pitch"
         },
         {
@@ -471,7 +470,7 @@ export const GrainOscModule = {
         {
             "componentType": "ButtonIncDec",
             "id": "10",
-            "x": 18,
+            "x": 42,
             "y": 233,
             "width": 58,
             "items": "Follow,Hold",
@@ -487,7 +486,7 @@ export const GrainOscModule = {
         {
             "componentType": "TextLabel",
             "id": "309",
-            "x": 18,
+            "x": 42,
             "y": 216,
             "text": "Hold warp",
             "textI18n": {
@@ -500,7 +499,7 @@ export const GrainOscModule = {
         {
             "componentType": "Input",
             "id": "111",
-            "x": 79,
+            "x": 103,
             "y": 232,
             "jackType": "control",
             "bandwidth": "static",
@@ -521,6 +520,7 @@ export const GrainOscModule = {
             "max": 12,
             "defaultValue": -12,
             "snapping": true,
+            "showZeroIndicator": true,
             "csoundName": "Level"
         },
         {
@@ -601,7 +601,7 @@ export const GrainOscModule = {
         {
             "componentType": "Knob",
             "id": "15",
-            "x": 170,
+            "x": 142,
             "y": 229,
             "size": "medium",
             "min": 0,
@@ -612,7 +612,7 @@ export const GrainOscModule = {
         {
             "componentType": "TextLabel",
             "id": "314",
-            "x": 170,
+            "x": 142,
             "y": 216,
             "text": "Time jitter %",
             "textI18n": {
@@ -625,7 +625,7 @@ export const GrainOscModule = {
         {
             "componentType": "Input",
             "id": "115",
-            "x": 225,
+            "x": 197,
             "y": 232,
             "jackType": "control",
             "bandwidth": "static",
@@ -634,49 +634,6 @@ export const GrainOscModule = {
                 "en": "Time jitter % CV",
                 "zh": "时间散布 % 调制输入",
                 "ru": "Модуляция: Разбр. вр."
-            }
-        },
-        {
-            "componentType": "ButtonIncDec",
-            "id": "16",
-            "x": 94,
-            "y": 233,
-            "width": 58,
-            "items": "Forward,Reverse",
-            "itemsI18n": {
-                "en": "Forward,Reverse",
-                "zh": "正向,反向",
-                "ru": "Вперёд,Назад"
-            },
-            "initialIndex": 0,
-            "binaryThreshold": true,
-            "csoundName": "Reverse"
-        },
-        {
-            "componentType": "TextLabel",
-            "id": "315",
-            "x": 94,
-            "y": 216,
-            "text": "Direction",
-            "textI18n": {
-                "en": "Direction",
-                "zh": "播放方向",
-                "ru": "Направл."
-            },
-            "fontSize": 10
-        },
-        {
-            "componentType": "Input",
-            "id": "116",
-            "x": 155,
-            "y": 232,
-            "jackType": "control",
-            "bandwidth": "static",
-            "ConnectorName": "Direction CV",
-            "connectorNameI18n": {
-                "en": "Direction CV",
-                "zh": "播放方向 调制输入",
-                "ru": "Модуляция: Направл."
             }
         },
         {

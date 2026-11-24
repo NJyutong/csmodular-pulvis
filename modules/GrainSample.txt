@@ -1,6 +1,6 @@
 ;@ requires GrainCore.txt
-opcode GrainSample, 0, kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkko
-    kDensity, kSize, kPosition, kPosJitter, kPitch, kPitchJitter, kWindow, kPan, kSpread, kFreeze, kLevel, kSeed, kSlot, kScan, kTimeJitter, kReverse, kDensityIn, kSizeIn, kPositionIn, kPosJitterIn, kPitchIn, kPitchJitterIn, kWindowIn, kPanIn, kSpreadIn, kFreezeIn, kLevelIn, kTimeJitterIn, kReverseIn, kOutL, kOutR, iDisplay xin
+opcode GrainSample, 0, kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkko
+    kDensity, kSize, kPosition, kPosJitter, kPitch, kPitchJitter, kWindow, kPan, kSpread, kFreeze, kLevel, kSeed, kSlot, kScan, kTimeJitter, kReverse, kDensityIn, kSizeIn, kPositionIn, kPosJitterIn, kPitchIn, kPitchJitterIn, kWindowIn, kPanIn, kSpreadIn, kFreezeIn, kLevelIn, kTimeJitterIn, kReverseIn, kScanIn, kOutL, kOutR, iDisplay xin
     aDry = 0
     kDensityCV zkr kDensityIn
     kDensity = kDensity + kDensityCV * 24
@@ -28,8 +28,11 @@ opcode GrainSample, 0, kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkko
     kTimeJitter = kTimeJitter / 100 + kTimeJitterCV * 1
     kReverseCV zkr kReverseIn
     kReverse = kReverse + kReverseCV * 1
+    kScanCV zkr kScanIn
+    kScan = kScan + kScanCV * 100
     kDensity limit kDensity, 0, 24
     kSize limit kSize, 2, 400
+    kScan limit kScan, -100, 100
     kSlot = int(limit(kSlot, 1, 8) + 0.5) - 1
     kScanPhase init 0
     kPreviousScanSlot init -1

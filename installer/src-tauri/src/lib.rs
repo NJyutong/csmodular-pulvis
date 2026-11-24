@@ -28,6 +28,9 @@ const INSTALL_FILES: &[&str] = &[
     "LICENSE",
     "assets/pulvis-icon.png",
     "assets/pulvis-social-preview.png",
+    "assets/pulvis-header-en.png",
+    "assets/pulvis-header-zh-CN.png",
+    "assets/pulvis-header-ru.png",
     "examples/pulvis-demo.json",
     MIGRATION_MARKER,
 ];
@@ -73,6 +76,18 @@ const BUNDLED_FILES: &[(&str, &[u8])] = &[
     (
         "assets/pulvis-social-preview.png",
         include_bytes!("../../../assets/pulvis-social-preview.png"),
+    ),
+    (
+        "assets/pulvis-header-en.png",
+        include_bytes!("../../../assets/pulvis-header-en.png"),
+    ),
+    (
+        "assets/pulvis-header-zh-CN.png",
+        include_bytes!("../../../assets/pulvis-header-zh-CN.png"),
+    ),
+    (
+        "assets/pulvis-header-ru.png",
+        include_bytes!("../../../assets/pulvis-header-ru.png"),
     ),
     (
         "examples/pulvis-demo.json",

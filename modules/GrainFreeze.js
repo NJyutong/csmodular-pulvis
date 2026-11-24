@@ -9,7 +9,7 @@ export const GrainFreezeModule = {
     "category": "fx",
     "status": "passable",
     "pulvisStudio": true,
-    "pulvisVersion": "0.0.5",
+    "pulvisVersion": "0.0.6",
     "width": 500,
     "height": 300,
     "gridHeight": 20,
@@ -205,8 +205,8 @@ export const GrainFreezeModule = {
         {
             "componentType": "Knob",
             "id": "3",
-            "x": 94,
-            "y": 133,
+            "x": 18,
+            "y": 229,
             "size": "medium",
             "min": 0,
             "max": 127,
@@ -216,8 +216,8 @@ export const GrainFreezeModule = {
         {
             "componentType": "TextLabel",
             "id": "302",
-            "x": 94,
-            "y": 120,
+            "x": 18,
+            "y": 216,
             "text": "Lookback",
             "textI18n": {
                 "en": "Lookback",
@@ -229,8 +229,8 @@ export const GrainFreezeModule = {
         {
             "componentType": "Input",
             "id": "104",
-            "x": 149,
-            "y": 136,
+            "x": 73,
+            "y": 232,
             "jackType": "control",
             "bandwidth": "static",
             "ConnectorName": "Lookback CV",
@@ -243,8 +243,8 @@ export const GrainFreezeModule = {
         {
             "componentType": "Knob",
             "id": "4",
-            "x": 170,
-            "y": 133,
+            "x": 94,
+            "y": 229,
             "size": "medium",
             "min": 0,
             "max": 127,
@@ -254,8 +254,8 @@ export const GrainFreezeModule = {
         {
             "componentType": "TextLabel",
             "id": "303",
-            "x": 170,
-            "y": 120,
+            "x": 94,
+            "y": 216,
             "text": "Lookback jit.",
             "textI18n": {
                 "en": "Lookback jit.",
@@ -267,8 +267,8 @@ export const GrainFreezeModule = {
         {
             "componentType": "Input",
             "id": "105",
-            "x": 225,
-            "y": 136,
+            "x": 149,
+            "y": 232,
             "jackType": "control",
             "bandwidth": "static",
             "ConnectorName": "Lookback jit. CV",
@@ -288,6 +288,7 @@ export const GrainFreezeModule = {
             "max": 48,
             "defaultValue": 0,
             "snapping": true,
+            "showZeroIndicator": true,
             "csoundName": "Pitch"
         },
         {
@@ -565,6 +566,7 @@ export const GrainFreezeModule = {
             "max": 12,
             "defaultValue": -3,
             "snapping": true,
+            "showZeroIndicator": true,
             "csoundName": "Level"
         },
         {
@@ -702,8 +704,8 @@ export const GrainFreezeModule = {
         {
             "componentType": "ButtonIncDec",
             "id": "16",
-            "x": 18,
-            "y": 233,
+            "x": 170,
+            "y": 137,
             "width": 58,
             "items": "Live,Snapshot",
             "itemsI18n": {
@@ -718,8 +720,8 @@ export const GrainFreezeModule = {
         {
             "componentType": "TextLabel",
             "id": "315",
-            "x": 18,
-            "y": 216,
+            "x": 170,
+            "y": 120,
             "text": "Source",
             "textI18n": {
                 "en": "Source",
@@ -731,7 +733,7 @@ export const GrainFreezeModule = {
         {
             "componentType": "Knob",
             "id": "17",
-            "x": 94,
+            "x": 170,
             "y": 229,
             "size": "medium",
             "min": 0,
@@ -742,7 +744,7 @@ export const GrainFreezeModule = {
         {
             "componentType": "TextLabel",
             "id": "316",
-            "x": 94,
+            "x": 170,
             "y": 216,
             "text": "Feedback",
             "textI18n": {
@@ -755,7 +757,7 @@ export const GrainFreezeModule = {
         {
             "componentType": "Input",
             "id": "117",
-            "x": 149,
+            "x": 225,
             "y": 232,
             "jackType": "control",
             "bandwidth": "static",
@@ -769,10 +771,10 @@ export const GrainFreezeModule = {
         {
             "componentType": "ButtonText",
             "id": "18",
-            "x": 170,
-            "y": 231,
+            "x": 94,
+            "y": 137,
             "width": 68,
-            "height": 18,
+            "height": 16,
             "text": "Capture snapshot",
             "textI18n": {
                 "en": "Capture snapshot",
@@ -783,6 +785,19 @@ export const GrainFreezeModule = {
             "mode": "momentary",
             "returnState": false,
             "csoundName": "Capture"
+        },
+        {
+            "componentType": "TextLabel",
+            "id": "317",
+            "x": 94,
+            "y": 120,
+            "text": "Snapshot",
+            "textI18n": {
+                "en": "Snapshot",
+                "zh": "快照",
+                "ru": "Память"
+            },
+            "fontSize": 10
         },
         {
             "componentType": "Line",
@@ -810,7 +825,7 @@ export const GrainFreezeModule = {
         {
             "componentType": "Input",
             "id": "101",
-            "x": 102,
+            "x": 68,
             "y": 274,
             "jackType": "audio",
             "bandwidth": "static",
